@@ -23,6 +23,8 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
 
         const { description, user } = req.body;
 
+
+
         if (!description) {
             return res.status(400).json({ message: 'Description is required' });
         }
@@ -37,6 +39,26 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 
+});
+
+router.get('/likes', auth, async (req, res) => {
+    try {
+        const response = await Image.findByIdAndUpdate(req.user.id, { $inc: { likes: 1 } })
+
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.get('/shares', auth, async (req, res) => {
+    try {
+        const response = await Image.findByIdAndUpdate(req.user.id, { $inc: { shares: 1 } })
+
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 module.exports = router;
