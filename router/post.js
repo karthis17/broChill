@@ -21,7 +21,7 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
-        const { description, user } = req.body;
+        const { description, category, sub_category } = req.body;
 
 
 
@@ -30,7 +30,7 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
         }
 
         const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-        const image = await Image.create({ filename: req.file.filename, originalFilename: req.file.originalname, path: imageUrl, description, username: user });
+        const image = await Image.create({ category, sub_category, imageUrl, description, user: req.user.id });
         console.log(image);
 
         res.status(201).json(image);
@@ -41,9 +41,32 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
 
 });
 
-router.get('/likes', auth, async (req, res) => {
+router.get('/get-post', async (req, res) => {
+
     try {
-        const response = await Image.findByIdAndUpdate(req.user.id, { $inc: { likes: 1 } })
+        let posts = '';
+        console.log(req.query)
+        if (req.query.sub_category === 'null' && req.query.category !== 'null') {
+            console.log(req.query.category)
+            posts = await Image.find({ category: req.query.category })
+        } else if (req.query.category !== 'null') {
+            posts = await Image.find({ category: req.query.category, sub_category: req.query.sub_category })
+        }
+        else {
+
+            posts = await Image.find();
+        }
+        console.log(posts);
+        res.send(posts);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error', err: error.message });
+    }
+
+});
+
+router.post('/likes', auth, async (req, res) => {
+    try {
+        const response = await Image.findByIdAndUpdate(req.body.postId, { likes: { $push: req.user.id } })
 
         res.json(response);
     } catch (error) {

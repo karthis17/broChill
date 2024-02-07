@@ -1,12 +1,16 @@
 const mongoose = require('mongoose');
 
 module.exports = mongoose.model("Image", {
-    description: String,
-    likes: { type: Number, default: 0 },
-    comments: Array,
-    shares: { type: Number, default: 0 },
-    filename: String,
-    originalFilename: String,
-    path: String,
-    username: String,
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    description: { type: String, required: true },
+    category: { type: String, required: true },
+    sub_category: { type: String },
+    imageUrl: { type: String, required: true },
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    comments: [{
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        text: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now }
+    }],
+    createdAt: { type: Date, default: Date.now }
 });
