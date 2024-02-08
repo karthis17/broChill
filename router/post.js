@@ -3,6 +3,8 @@ const multer = require('multer');
 const path = require('path');
 const Image = require('../model/image.model');
 const auth = require('../middelware/auth');
+const Like = require('../model/like.model');
+const Follow = require('../model/follow.model');
 
 // Set up multer for handling file uploads
 const storage = multer.diskStorage({
@@ -20,6 +22,8 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
+
+        console.log(req.file)
 
         const { description, category, sub_category } = req.body;
 
@@ -66,13 +70,43 @@ router.get('/get-post', async (req, res) => {
 
 router.post('/likes', auth, async (req, res) => {
     try {
-        const response = await Image.findByIdAndUpdate(req.body.postId, { likes: { $push: req.user.id } })
+        await Image.findByIdAndUpdate(req.body.postId, { $push: { likes: req.user.id } });
+        const response = await Like.create({ post: req.body.postId, user: req.user.id });
+        res.status(200).json(response);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
 
-        res.json(response);
+router.post("/follow", auth, async (req, res) => {
+    try {
+        const response = await Follow.create({ follower: req.user.id, following: req.body.following_id });
+        res.send(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
+router.post("/get-followers", auth, async (req, res) => {
+    try {
+        const response = await Follow.find({ following: req.user.id });
+        res.send(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.get("/get-following", auth, async (req, res) => {
+    try {
+        const response = await Follow.find({ follower: req.user.id });
+        res.send(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+
 
 router.get('/shares', auth, async (req, res) => {
     try {
