@@ -15,16 +15,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-const cpUpload = upload.fields([{ name: 'question', maxCount: 1 }, { name: 'state1', maxCount: 5 }, { name: 'state2', maxCount: 8 }, { name: 'state3', maxCount: 8 }]);
-
-
-router.post('/upload-question', cpUpload, async (req, res) => {
-
-
-    console.log(req.files);
-    res.status(200).json(req.files);
-
+router.post('/upload', upload.array('images'), (req, res) => {
+    res.json({
+        status: 'success',
+        files: req.files
+    });
 });
-
 
 module.exports = router;
