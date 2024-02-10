@@ -160,4 +160,48 @@ router.post('/add-img-poll', cpUpload, async (req, res) => {
 
 });
 
+router.post('/likes', auth, async (req, res) => {
+
+    if (!req.body.pollId) res.status(404).json({ message: 'Poll id is required' });
+    if (!req.user.id) res.status(404).json({ message: 'Poll id is required' });
+
+    try {
+        const response = await Poll.findByIdAndUpdate(req.body.pollId, { $push: { likes: req.user.id } });
+        res.status(200).json(response);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+router.post('/add-comment', auth, async (req, res) => {
+    if (!req.body.pollId) res.status(404).json({ message: 'Poll id is required' });
+
+    if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
+
+    try {
+        const response = await Poll.findByIdAndUpdate(req.body.pollId, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
+        res.status(200).json({
+            message: "comment added successfully",
+            data: response
+        })
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+router.post('/share', auth, async (req, res) => {
+
+    if (!req.body.pollId) res.status(404).json({ message: 'Poll id is required' });
+
+    try {
+        const response = await Image.findByIdAndUpdate(req.body.pollId, { $push: { shares: req.user.id } });
+        res.status(200).json(response);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 module.exports = router;

@@ -6,7 +6,6 @@ const auth = require('../middelware/auth');
 const Like = require('../model/like.model');
 const Follow = require('../model/follow.model');
 
-// Set up multer for handling file uploads
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
     filename: function (req, file, callback) {
@@ -16,7 +15,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Handle file upload
 router.post('/upload', auth, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
@@ -117,5 +115,23 @@ router.get('/shares', auth, async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
+router.post('/add-comment', auth, async (req, res) => {
+    if (!req.body.postId) res.status(404).json({ message: 'Poll id is required' });
+
+    if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
+
+    try {
+        const response = await Poll.findByIdAndUpdate(req.body.postId, { $push: { comment: { text: req.body.comment, user: req.user.id } } })
+        res.status(200).json({
+            message: "comment added successfully",
+            data: response
+        })
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 
 module.exports = router;

@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
-const Image = require('../model/image.model');
+const Quizzes = require('../model/quizzes.model');
 const auth = require('../middelware/auth');
 
 
@@ -15,11 +15,25 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-router.post('/upload', upload.array('images'), (req, res) => {
-    res.json({
-        status: 'success',
-        files: req.files
-    });
+const cpUpload = upload.fields([{ name: 'question', maxCount: 1 }, { name: 'state1', maxCount: 5 }, { name: 'state2', maxCount: 5 }, { name: 'state3', maxCount: 5 }]);
+
+router.post('/upload', cpUpload, (req, res) => {
+
+    let statement_1 = [];
+    let statement_2 = [];
+    let statement_3 = [];
+
+    for (let i = 0; i < req.files['state1'].length; i++) {
+        statement_1.push(req.files['state1'][i])
+        statement_2.push(req.files['state2'][i])
+        statement_3.push(req.files['state3'][i])
+    }
+
+    try {
+        const response = Quizzes.create({ question: req.files['question'][0], })
+    } catch (error) {
+
+    }
 });
 
 module.exports = router;
