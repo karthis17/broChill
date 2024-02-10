@@ -19,21 +19,24 @@ const cpUpload = upload.fields([{ name: 'question', maxCount: 1 }, { name: 'stat
 
 router.post('/upload', cpUpload, (req, res) => {
 
-    let statement_1 = [];
-    let statement_2 = [];
-    let statement_3 = [];
+    console.log(req.body.frameName)
+    console.log(req.files)
 
-    for (let i = 0; i < req.files['state1'].length; i++) {
-        statement_1.push(req.files['state1'][i])
-        statement_2.push(req.files['state2'][i])
-        statement_3.push(req.files['state3'][i])
-    }
+    // let statement_1 = [];
+    // let statement_2 = [];
+    // let statement_3 = [];
 
-    try {
-        const response = Quizzes.create({ question: req.files['question'][0], })
-    } catch (error) {
+    // for (let i = 0; i < req.files['state1'].length; i++) {
+    //     statement_1.push(req.files['state1'][i])
+    //     statement_2.push(req.files['state2'][i])
+    //     statement_3.push(req.files['state3'][i])
+    // }
 
-    }
+    // try {
+    //     const response = Quizzes.create({ question: req.files['question'][0], })
+    // } catch (error) {
+
+    // }
 });
 
 module.exports = router;

@@ -5,6 +5,7 @@ const userRouter = require("./router/user");
 const imageRouter = require("./router/post");
 const pollRouter = require("./router/poll");
 const im = require("./router/quizzes");
+const frameRouter = require("./router/frams");
 const cors = require("cors")
 const path = require("path");
 const bodyParser = require("body-parser");
@@ -26,6 +27,7 @@ app.use("/api/users", userRouter);
 app.use(express.static(path.join(__dirname, 'uploads')));
 app.use("/api/img", imageRouter);
 app.use("/api/poll", pollRouter);
+app.use("/api/frame", frameRouter);
 app.use("/img", im);
 
 mongoose.connect(process.env.MONG_URL).then(() => {

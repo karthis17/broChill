@@ -30,7 +30,6 @@ router.post(
 
         const { username, email, password } = req.body;
 
-        // localStorage.setItem("userid", username);
 
         try {
             let user = await User.findOne({
