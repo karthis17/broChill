@@ -101,7 +101,7 @@ router.post('/get-result', auth, async (req, res) => {
     try {
         const response = await Quizzes.findByIdAndUpdate(quizze_id, { $push: { players: { user: req.user.id, score: score } } });
 
-        const result1 = response.results.find(result => result.minScore <= score && result.maxScore >= score);
+        const result1 = await response.results.find(result => result.minScore <= score && result.maxScore >= score);
         console.log(response, result1);
 
         res.json(result1);
