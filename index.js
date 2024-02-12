@@ -4,7 +4,7 @@ require("dotenv").config()
 const userRouter = require("./router/user");
 const imageRouter = require("./router/post");
 const pollRouter = require("./router/poll");
-const im = require("./router/quizzes");
+const quizzeRouter = require("./router/quizzes");
 const flamesRouter = require("./router/flames");
 const frameRouter = require("./router/frams");
 const cors = require("cors")
@@ -30,7 +30,7 @@ app.use("/api/img", imageRouter);
 app.use("/api/poll", pollRouter);
 app.use("/api/frame", frameRouter);
 app.use("/api/flames", flamesRouter);
-app.use("/img", im);
+app.use("/api/quizzes", quizzeRouter);
 
 mongoose.connect(process.env.MONG_URL).then(() => {
     app.listen(port, () => {
