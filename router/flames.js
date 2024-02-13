@@ -50,7 +50,7 @@ router.post('/', auth, async (req, res) => {
 
     try {
         const response = await Flames.findOneAndUpdate({ flamesWord: { $regex: result, $options: 'i' } }, { $push: { users: { user: req.user.id, name1, name2 } } });
-        res.send({ response, result });
+        res.send({ flamesFrame: response.imageUrl, result, name1, name2 });
 
     } catch (error) {
         res.status(500).send({ err: error.message })
