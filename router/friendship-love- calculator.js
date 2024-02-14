@@ -20,6 +20,7 @@ const upload = multer({ storage: storage });
 router.post('/add-love-quotes', upload.single('image'), async (req, res) => {
 
     const { maxPercentage, minPercentage, text } = req.body;
+    console.log(req.file)
 
     if (!maxPercentage || !minPercentage) {
         res.status(400).json({ errors: "min and max percentage value are required" })
@@ -133,7 +134,7 @@ router.post('/friend-calculate', auth, async (req, res) => {
             friendshipPercentage = 10;
         }
     } catch (error) {
-        return res.status(400).json({ error: 'Invalid names provided' });
+        return res.status(400).json({ error: `Invalid names provided' ${error.message} ${friendshipPercentage}` });
     }
 
     console.log(friendshipPercentage);
@@ -146,7 +147,7 @@ router.post('/friend-calculate', auth, async (req, res) => {
         });
 
         if (!result) {
-            return res.status(404).json({ error: 'No result found for the given love percentage' });
+            return res.status(404).json({ error: 'No result found' + result + friendshipPercentage });
         }
 
         const resultText = result.text[Math.floor(Math.random() * result.text.length)];
