@@ -7,6 +7,7 @@ const pollRouter = require("./router/poll");
 const quizzeRouter = require("./router/quizzes");
 const flamesRouter = require("./router/flames");
 const frameRouter = require("./router/frams");
+const pickRouter = require("./router/pickOneKickOne");
 const nameRouter = require("./router/nameMeaningNdFact");
 const calc = require("./router/friendship-love- calculator");
 const cors = require("cors")
@@ -34,6 +35,7 @@ app.use("/api/frame", frameRouter);
 app.use("/api/flames", flamesRouter);
 app.use("/api/quizzes", quizzeRouter);
 app.use("/api/nameing", nameRouter);
+app.use("/api/pick-and-kick", pickRouter);
 app.use("/api/love-friendship-calc", calc);
 
 mongoose.connect(process.env.MONG_URL).then(() => {
