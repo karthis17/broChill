@@ -26,7 +26,14 @@ router.post('/upload', cpUpload, async (req, res) => {
 
     const { correctOption } = req.body;
 
-    const question = `${req.protocol}://${req.get('host')}/${req.files['question'][0].filename}`
+    let question;
+    if (req.files['question']) {
+
+        question = `${req.protocol}://${req.get('host')}/${req.files['question'][0].filename}`
+    } else {
+        console.log(req.body)
+        question = req.body.question;
+    }
 
     if (!correctOption || !question) {
         return res.status(404).send({ err: "aee" });
@@ -35,21 +42,38 @@ router.post('/upload', cpUpload, async (req, res) => {
 
     let options = [];
     let answer;
-    console.log(req.files['options'])
-    req.files['options'].forEach(element => {
-        if (element.originalname === correctOption) {
-            answer = element;
-            options.push({
-                option: `${req.protocol}://${req.get('host')}/${element.filename}`,
-                answer: true,
-            });
-        } else {
-            options.push({
-                option: `${req.protocol}://${req.get('host')}/${element.filename}`,
-                answer: false
-            });
-        }
-    });
+    if (req.files['options']) {
+
+        req.files['options'].forEach(element => {
+            if (element.originalname === correctOption) {
+                answer = element;
+                options.push({
+                    option: `${req.protocol}://${req.get('host')}/${element.filename}`,
+                    answer: true,
+                });
+            } else {
+                options.push({
+                    option: `${req.protocol}://${req.get('host')}/${element.filename}`,
+                    answer: false
+                });
+            }
+        });
+    } else {
+        req.body.options.forEach(item => {
+            if (item === correctOption) {
+                answer = item;
+                options.push({
+                    option: item,
+                    answer: true,
+                });
+            } else {
+                options.push({
+                    option: item,
+                    answer: false
+                });
+            }
+        })
+    }
 
     if (!answer) {
         return res.status(404).send({ err: "awser is requried" });
