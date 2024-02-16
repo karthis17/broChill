@@ -10,6 +10,7 @@ const frameRouter = require("./router/frams");
 const pickRouter = require("./router/pickOneKickOne");
 const nameRouter = require("./router/nameMeaningNdFact");
 const guessRouter = require("./router/guessGame")
+const funQuRouter = require("./router/funQuizzes")
 const calc = require("./router/friendship-love- calculator");
 const cors = require("cors")
 const path = require("path");
@@ -37,6 +38,7 @@ app.use("/api/flames", flamesRouter);
 app.use("/api/quizzes", quizzeRouter);
 app.use("/api/nameing", nameRouter);
 app.use("/api/guess-game", guessRouter);
+app.use("/api/fun-quizzes", funQuRouter);
 app.use("/api/pick-and-kick", pickRouter);
 app.use("/api/love-friendship-calc", calc);
 
