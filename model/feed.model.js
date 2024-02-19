@@ -7,6 +7,7 @@ module.exports = mongoose.model("feed", {
     title: { type: String, required: true },
     imageUrl: { type: String, required: true },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    shares: { type: Number, default: 0 },
     comments: [{
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         text: { type: String, required: true },

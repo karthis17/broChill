@@ -12,7 +12,7 @@ module.exports = mongoose.model("frames", {
     }],
 
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
-    share: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
+    shares: { type: Number, default: 0 },
     comments: [{
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         text: { type: String, required: true },

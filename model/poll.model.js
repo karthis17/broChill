@@ -15,5 +15,7 @@ module.exports = mongoose.model("poll", {
         text: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
-    shares: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', unique: true }]
+    shares: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now }
+
 })

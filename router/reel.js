@@ -107,9 +107,9 @@ router.post('/like', auth, async (req, res) => {
 
 
 
-router.get('/shares', auth, async (req, res) => {
+router.post('/share', async (req, res) => {
     try {
-        const response = await reels.findByIdAndUpdate(req.user.id, { $inc: { shares: 1 } })
+        const response = await reels.findByIdAndUpdate(req.body.reelId, { $inc: { shares: 1 } })
 
         res.json(response);
     } catch (error) {
@@ -123,7 +123,7 @@ router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await Poll.findByIdAndUpdate(req.body.reelId, { $push: { comment: { text: req.body.comment, user: req.user.id } } })
+        const response = await reels.findByIdAndUpdate(req.body.reelId, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
         res.status(200).json({
             message: "comment added successfully",
             data: response

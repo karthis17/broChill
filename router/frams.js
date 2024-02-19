@@ -114,12 +114,12 @@ router.post('/add-comment', auth, async (req, res) => {
     }
 });
 
-router.post('/share', auth, async (req, res) => {
+router.post('/share', async (req, res) => {
 
     if (!req.body.frame_id) res.status(404).json({ message: 'Poll id is required' });
 
     try {
-        const response = await Frames.findByIdAndUpdate(req.body.frame_id, { $push: { share: req.user.id } });
+        const response = await Frames.findByIdAndUpdate(req.body.frame_id, { $inc: { shares: 1 } });
         res.status(200).json(response);
     } catch (error) {
         console.error(error);

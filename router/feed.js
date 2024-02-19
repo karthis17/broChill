@@ -3,7 +3,7 @@ const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
 const auth = require('../middelware/auth');
-const Follow = require('../model/follow.model');
+
 
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
@@ -98,9 +98,9 @@ router.post('/like', auth, async (req, res) => {
 
 
 
-router.get('/shares', auth, async (req, res) => {
+router.post('/share', async (req, res) => {
     try {
-        const response = await feeds.findByIdAndUpdate(req.user.id, { $inc: { shares: 1 } })
+        const response = await feeds.findByIdAndUpdate(req.body.feedId, { $inc: { shares: 1 } })
 
         res.json(response);
     } catch (error) {
@@ -109,12 +109,12 @@ router.get('/shares', auth, async (req, res) => {
 });
 
 router.post('/add-comment', auth, async (req, res) => {
-    if (!req.body.reelId) res.status(404).json({ message: 'reel id is required' });
+    if (!req.body.feedId) res.status(404).json({ message: 'feed id is required' });
 
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await Poll.findByIdAndUpdate(req.body.reelId, { $push: { comment: { text: req.body.comment, user: req.user.id } } })
+        const response = await feeds.findByIdAndUpdate(req.body.feedId, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
         res.status(200).json({
             message: "comment added successfully",
             data: response
