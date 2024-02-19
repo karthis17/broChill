@@ -15,5 +15,6 @@ module.exports = mongoose.model("reel", {
         text: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
+    shares: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
 });

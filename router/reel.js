@@ -82,38 +82,25 @@ router.get("/get-all", async (req, res) => {
 
 router.post('/like', auth, async (req, res) => {
     try {
-        const response = await reels.findByIdAndUpdate(req.body.reelId, { $push: { likes: req.user.id } });
-        // const response = await Like.create({ post: req.body., user: req.user.id });
-        res.status(200).json(response);
+        const reelId = req.body.reelId;
+        const userId = req.user.id;
+
+        const reel = await reels.findById(reelId);
+        if (!reel) {
+            return res.status(404).json({ message: 'reel not found' });
+        }
+
+        if (reel.likes.includes(userId)) {
+            return res.status(400).json({ message: 'You have already liked this reel' });
+        }
+
+        // Add user's ID to the likes array and save the reel
+        reel.likes.push(userId);
+        await reel.save();
+
+        res.status(200).json({ message: 'reel liked successfully' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-});
-
-router.post("/follow", auth, async (req, res) => {
-    try {
-        const response = await Follow.create({ follower: req.user.id, following: req.body.following_id });
-        res.send(response);
-    } catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-router.post("/get-followers", auth, async (req, res) => {
-    try {
-        const response = await Follow.find({ following: req.user.id });
-        res.send(response);
-    } catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-router.get("/get-following", auth, async (req, res) => {
-    try {
-        const response = await Follow.find({ follower: req.user.id });
-        res.send(response);
-    } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
     }
 });

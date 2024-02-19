@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const router = express.Router();
 const User = require("../model/user.model");
+const Follow = require("../model/follow.model");
 const auth = require("../middelware/auth");
 
 
@@ -163,6 +164,46 @@ router.get("/me", auth, async (req, res) => {
 });
 
 
+
+router.post("/follow", auth, async (req, res) => {
+    try {
+        const { following_id } = req.body;
+        if (!following_id) {
+            return res.status(400).json({ message: 'Following ID is required' });
+        }
+
+        const existingFollow = await Follow.findOne({ follower: req.user.id, following: following_id });
+        if (existingFollow) {
+            return res.status(400).json({ message: 'You are already following this user' });
+        }
+
+        const response = await Follow.create({ follower: req.user.id, following: following_id });
+        res.status(201).json(response);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.get("/followers", auth, async (req, res) => {
+    try {
+        const followers = await Follow.find({ following: req.user.id }).populate('follower', 'username');
+        res.status(200).json(followers);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.get("/following", auth, async (req, res) => {
+    try {
+        const following = await Follow.find({ follower: req.user.id }).populate('following', 'username');
+        res.status(200).json(following);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 
 
 

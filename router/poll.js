@@ -162,15 +162,28 @@ router.post('/add-img-poll', cpUpload, async (req, res) => {
 
 router.post('/likes', auth, async (req, res) => {
 
-    if (!req.body.pollId) res.status(404).json({ message: 'Poll id is required' });
-    if (!req.user.id) res.status(404).json({ message: 'Poll id is required' });
-
     try {
-        const response = await Poll.findByIdAndUpdate(req.body.pollId, { $push: { likes: req.user.id } });
-        res.status(200).json(response);
+        const pollId = req.body.pollId;
+        const userId = req.user.id;
+
+        // Check if the user has already liked the post
+        const poll = await Poll.findById(pollId);
+        if (!poll) {
+            return res.status(404).json({ message: 'poll not found' });
+        }
+
+        if (poll.likes.includes(userId)) {
+            return res.status(400).json({ message: 'You have already liked this poll' });
+        }
+
+        // Add user's ID to the likes array and save the poll
+        poll.likes.push(userId);
+        await poll.save();
+
+        res.status(200).json({ message: 'poll liked successfully' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 

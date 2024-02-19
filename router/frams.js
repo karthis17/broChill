@@ -73,14 +73,27 @@ router.post('/upload-image', auth, upload.single('image'), async (req, res) => {
 
 router.post('/likes', auth, async (req, res) => {
 
-    if (!req.body.frame_id) res.status(404).json({ message: 'frame id is required' });
-
     try {
-        const response = await Frames.findByIdAndUpdate(req.body.frame_id, { $push: { like: req.user.id } });
-        res.status(200).json(response);
+        const frame_id = req.body.frame_id;
+        const userId = req.user.id;
+        console.log(req.body)
+
+        const frame = await Frames.findById(frame_id);
+        if (!frame) {
+            return res.status(404).json({ message: 'frame not found' });
+        }
+
+        if (frame.likes.includes(userId)) {
+            return res.status(400).json({ message: 'You have already liked this frame' });
+        }
+
+        frame.likes.push(userId);
+        await frame.save();
+
+        res.status(200).json({ message: 'frame liked successfully' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 
