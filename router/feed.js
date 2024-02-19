@@ -1,9 +1,8 @@
+const feeds = require('../model/feed.model');
 const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
-const reels = require('../model/reels.model');
 const auth = require('../middelware/auth');
-// const Like = require('../model/like.model');
 const Follow = require('../model/follow.model');
 
 const storage = multer.diskStorage({
@@ -15,7 +14,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-router.post('/upload-reel', auth, upload.single('reel'), async (req, res) => {
+router.post('/upload-feed', auth, upload.single('feed'), async (req, res) => {
     console.log(req.body)
     try {
         if (!req.file) {
@@ -24,19 +23,20 @@ router.post('/upload-reel', auth, upload.single('reel'), async (req, res) => {
 
         console.log(req.file)
 
-        const { description, category, hashtags, title } = req.body;
-
-        if (!Array.isArray(hashtags)) {
-            return res.status(404).json({ message: 'hashtags must be an array' });
-        }
+        const { description, category, title } = req.body;
 
 
         if (!description) {
             return res.status(400).json({ message: 'Description is required' });
         }
 
-        const filePath = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-        const reel = await reels.create({ category, title, filePath, description, user: req.user.id, hashtags });
+        if (!title) {
+            return res.status(400).json({ message: 'Title is required' });
+        }
+
+
+        const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+        const reel = await feeds.create({ category, title, imageUrl, description, user: req.user.id, });
         console.log(reel);
 
         res.status(201).json(reel);
@@ -48,22 +48,11 @@ router.post('/upload-reel', auth, upload.single('reel'), async (req, res) => {
 });
 
 
-router.get('/search', async (req, res) => {
-
-    try {
-        const ress = await reels.find({ hashtags: { $in: [hashtag] } });
-        res.json(ress);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-
-});
-
 
 router.get('/get-reel/:id', async (req, res) => {
 
     try {
-        const reel = await reels.findById(req.params.id);
+        const reel = await feeds.findById(req.params.id);
         res.send(reel)
     } catch (error) {
         res.status(500).json({ message: 'Internal server error', err: error.message });
@@ -73,7 +62,7 @@ router.get('/get-reel/:id', async (req, res) => {
 
 router.get("/get-all", async (req, res) => {
     try {
-        const ress = await reels.find();
+        const ress = await feeds.find();
         res.json(ress);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -82,7 +71,7 @@ router.get("/get-all", async (req, res) => {
 
 router.post('/like', auth, async (req, res) => {
     try {
-        const response = await reels.findByIdAndUpdate(req.body.reelId, { $push: { likes: req.user.id } });
+        const response = await feeds.findByIdAndUpdate(req.body.feedId, { $push: { likes: req.user.id } });
         // const response = await Like.create({ post: req.body., user: req.user.id });
         res.status(200).json(response);
     } catch (error) {
@@ -122,7 +111,7 @@ router.get("/get-following", auth, async (req, res) => {
 
 router.get('/shares', auth, async (req, res) => {
     try {
-        const response = await reels.findByIdAndUpdate(req.user.id, { $inc: { shares: 1 } })
+        const response = await feeds.findByIdAndUpdate(req.user.id, { $inc: { shares: 1 } })
 
         res.json(response);
     } catch (error) {

@@ -9,12 +9,13 @@ const flamesRouter = require("./router/flames");
 const frameRouter = require("./router/frams");
 const pickRouter = require("./router/pickOneKickOne");
 const nameRouter = require("./router/nameMeaningNdFact");
-const guessRouter = require("./router/guessGame")
-const funQuRouter = require("./router/funQuizzes")
-const riddleRouter = require("./router/riddles")
-const reelRouter = require("./router/reel")
+const guessRouter = require("./router/guessGame");
+const funQuRouter = require("./router/funQuizzes");
+const riddleRouter = require("./router/riddles");
+const reelRouter = require("./router/reel");
+const feedRouter = require("./router/feed");
 const calc = require("./router/friendship-love- calculator");
-const cors = require("cors")
+const cors = require("cors");
 const path = require("path");
 const bodyParser = require("body-parser");
 
@@ -43,6 +44,7 @@ app.use("/api/guess-game", guessRouter);
 app.use("/api/fun-quizzes", funQuRouter);
 app.use("/api/riddles", riddleRouter);
 app.use("/api/reels", reelRouter);
+app.use("/api/feeds", feedRouter);
 app.use("/api/pick-and-kick", pickRouter);
 app.use("/api/love-friendship-calc", calc);
 
