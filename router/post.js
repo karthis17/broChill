@@ -94,9 +94,9 @@ router.post('/likes', auth, async (req, res) => {
 
 
 
-router.get('/shares', auth, async (req, res) => {
+router.post('/share', async (req, res) => {
     try {
-        const response = await Image.findByIdAndUpdate(req.user.id, { $inc: { shares: 1 } })
+        const response = await Image.findByIdAndUpdate(req.body.postId, { $inc: { shares: 1 } })
 
         res.json(response);
     } catch (error) {
@@ -110,7 +110,7 @@ router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await Image.findByIdAndUpdate(req.body.postId, { $push: { comment: { text: req.body.comment, user: req.user.id } } })
+        const response = await Image.findByIdAndUpdate(req.body.postId, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
         res.status(200).json({
             message: "comment added successfully",
             data: response
