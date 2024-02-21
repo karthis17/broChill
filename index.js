@@ -51,6 +51,7 @@ app.use("/api/love-friendship-calc", calc);
 mongoose.connect(process.env.MONG_URL).then(() => {
     app.listen(port, () => {
         console.log("App listening on port " + port + " http://localhost:" + port);
-    })
+    });
+
 });
 

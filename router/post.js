@@ -2,9 +2,8 @@ const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
 const Image = require('../model/image.model');
+const Category = require('../model/category.model');
 const auth = require('../middelware/auth');
-const Like = require('../model/like.model');
-const Follow = require('../model/follow.model');
 
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
@@ -23,7 +22,7 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
 
         console.log(req.file)
 
-        const { description, category, sub_category } = req.body;
+        const { description, category, title, type } = req.body;
 
 
 
@@ -32,7 +31,7 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
         }
 
         const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-        const image = await Image.create({ category, sub_category, imageUrl, description, user: req.user.id });
+        const image = await Image.create({ category, imageUrl, description, user: req.user.id, title, type });
         console.log(image);
 
         res.status(201).json(image);
@@ -43,25 +42,23 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
 
 });
 
-router.get('/get-post', async (req, res) => {
+router.get('/post-category/:category', async (req, res) => {
+
+    let { category } = req.params;
+
 
     try {
-        let posts = '';
-        console.log(req.query)
-        if (req.query.sub_category === 'null' && req.query.category !== 'null') {
-            console.log(req.query.category)
-            posts = await Image.find({ category: req.query.category })
-        } else if (req.query.category !== 'null') {
-            posts = await Image.find({ category: req.query.category, sub_category: req.query.sub_category })
-        }
-        else {
 
-            posts = await Image.find();
-        }
-        console.log(posts);
-        res.send(posts);
+
+        const post = await Image.find({ category: category });
+        res.status(200).json(post)
+
+
     } catch (error) {
-        res.status(500).json({ message: 'Internal server error', err: error.message });
+        console.log(category)
+        const post = await Image.find();
+        res.status(200).json(post)
+        // res.status(500).json({ message: 'Internal server error', err: error.message });
     }
 
 });
@@ -110,7 +107,7 @@ router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await Image.findByIdAndUpdate(req.body.postId, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
+        const response = await Image.findByIdAndUpdate(req.body.postId, { $push: { comments: { text: req.body.comment, user: req.user.id } } });
         res.status(200).json({
             message: "comment added successfully",
             data: response
@@ -118,6 +115,61 @@ router.post('/add-comment', auth, async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+router.post('/add-category', async (req, res) => {
+
+    let { title, category } = req.body;
+
+    if (!category) {
+        res.status(404).json({ message: "title is required" });
+    }
+
+    if (!title) {
+        title = [];
+    }
+
+
+    try {
+        const cate = await Category.create({ default: category, title });
+
+        res.status(200).json({ category: cate });
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+});
+
+router.get('/categories', async (req, res) => {
+    try {
+        let lang = req.query.lang;
+
+        const results = await Category.find();
+        if (lang && lang !== "english") {
+            console.log(results)
+
+            if (results.length > 0) {
+                const texts = results.map(result => {
+                    const titleObj = result.title.find(t => t.lang === lang);
+
+
+                    return {
+                        _id: result._id,
+                        text: titleObj ? titleObj.text : result.default || ''
+                    };
+
+
+                });
+                console.log(texts);
+                res.status(200).json(texts);
+            } else {
+                res.status(404).json({ message: 'No categories found for the specified language' });
+            }
+        } else {
+            res.status(200).json(results);
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error", error: error.message });
     }
 });
 

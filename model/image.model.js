@@ -3,10 +3,11 @@ const mongoose = require('mongoose');
 module.exports = mongoose.model("Post", {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     description: { type: String, required: true },
-    category: { type: String, required: true },
-    sub_category: { type: String },
+    title: { type: String, required: true },
+    category: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
     imageUrl: { type: String, required: true },
-    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', unique: true }],
+    type: { type: String, required: true },
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     comments: [{
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         text: { type: String, required: true },
