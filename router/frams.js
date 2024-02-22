@@ -3,7 +3,7 @@ const auth = require('../middelware/auth');
 const multer = require('multer');
 const router = require('express').Router();
 const path = require('path');
-
+const Jimp = require('jimp');
 
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
@@ -30,14 +30,21 @@ router.get('/get-frames', async (req, res) => {
 
 router.post('/upload-frame', upload.single('frame'), async (req, res) => {
 
+
+    console.log(req.body)
+
+    const coordinates = { x: req.body.x, y: req.body.y, width: req.body.coordinateW, height: req.body.coordinateH }
+    const frame_size = { width: req.body.frameW, height: req.body.frameH }
+
     if (!req.file) {
         return res.status(404).send({ message: "No file found" });
     }
 
-    let frame = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+    let frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
 
     try {
-        const results = await Frames.create({ frameName: req.body.frameName, frameUrl: frame });
+        const results = await Frames.create({ frameName: req.body.frameName, frameUrl, frame_size, coordinates, path: req.file.path });
+
 
         res.send(results);
     } catch (error) {
@@ -60,9 +67,17 @@ router.post('/upload-image', auth, upload.single('image'), async (req, res) => {
     let image = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
 
     try {
-        const results = await Frames.findByIdAndUpdate(req.body.frame_id, { $push: { uploads: { user: req.user.id, image: image } } });
+        const results = await Frames.findByIdAndUpdate(req.body.frame_id);
 
-        res.send(results);
+        const baseImagePath = path.join(__dirname, `../${results.path}`);
+        const maskImagePath = path.join(__dirname, `../${req.file.path}`);
+        const outputPath = path.join(__dirname, `../${req.file.path}`);
+
+        console.log(results);
+
+        await applyMask(baseImagePath, maskImagePath, outputPath, results.coordinates.x, results.coordinates.y, results.frame_size.width, results.frame_size.height, results.coordinates.width, results.coordinates.height)
+
+        res.send({ results, link: image });
     } catch (error) {
 
         res.status(500).send("internal error: " + error.message);
@@ -136,6 +151,36 @@ router.get('get/:id', async (req, res) => {
         res.status(500).json({ message: "Internal server error", error: error.message });
     }
 
-})
+});
+
+
+
+async function applyMask(baseImagePath, maskImagePath, outputPath, x, y, baseW, baseH, maskW, maskH) {
+    try {
+        // Load images
+        const baseImage = await Jimp.read(baseImagePath);
+        const maskImage = await Jimp.read(maskImagePath);
+
+        console.log(+maskW, +maskH, +baseH, +baseW);
+        console.log(maskW, maskH, baseH, baseW);
+
+        maskImage.resize(+maskW, +maskH);
+        baseImage.resize(+baseW, +baseH);
+
+        baseImage.composite(maskImage, x, y, {
+            mode: Jimp.BLEND_DESTINATION_OVER
+        });
+
+        // Save the resulting image
+        await baseImage.writeAsync(outputPath);
+
+
+
+        console.log('Mask applied successfully.');
+    } catch (error) {
+        console.error('An error occurred:', error);
+    }
+}
+
 
 module.exports = router;

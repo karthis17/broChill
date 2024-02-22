@@ -36,7 +36,7 @@ router.post('/upload', cpUpload, async (req, res) => {
     }
 
     if (!correctOption || !question) {
-        return res.status(404).send({ err: "aee" });
+        return res.status(404).send({ err: "aee", question, correctOption });
     }
 
 

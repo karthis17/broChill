@@ -37,10 +37,34 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
         res.status(201).json(image);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Internal server error', error: error.message });
     }
 
 });
+
+
+router.post('/add-funfilter', auth, upload.single('image'), async (req, res) => {
+
+    if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    console.log(req.file)
+
+    const { description, title, type } = req.body;
+
+
+
+    if (!description) {
+        return res.status(400).json({ message: 'Description is required' });
+    }
+
+    const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+    const image = await Image.create({ imageUrl, description, user: req.user.id, title, type });
+    console.log(image);
+
+});
+
 
 router.get('/post-category/:category', async (req, res) => {
 
@@ -139,6 +163,7 @@ router.post('/add-category', async (req, res) => {
         res.status(500).json({ message: "Internal server error", error: error.message });
     }
 });
+
 
 router.get('/categories', async (req, res) => {
     try {
