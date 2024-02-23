@@ -9,12 +9,12 @@ module.exports = mongoose.model("frames", {
         width: { type: Number, required: true },
         height: { type: Number, required: true }
     },
-    coordinates: {
+    coordinates: [{
         x: { type: Number, required: true },
         y: { type: Number, required: true },
         width: { type: Number, required: true },
         height: { type: Number, required: true }
-    },
+    }],
     uploads: [{
         image: { type: String, required: true },
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

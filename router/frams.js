@@ -8,7 +8,7 @@ const Jimp = require('jimp');
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
     filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+        callback(null, file.fieldname + new Date().getMilliseconds() + '-' + Date.now() + path.extname(file.originalname));
     }
 });
 
@@ -31,10 +31,13 @@ router.get('/get-frames', async (req, res) => {
 router.post('/upload-frame', upload.single('frame'), async (req, res) => {
 
 
-    console.log(req.body)
+    let { frameName, frame_size, coordinates } = req.body;
 
-    const coordinates = { x: req.body.x, y: req.body.y, width: req.body.coordinateW, height: req.body.coordinateH }
-    const frame_size = { width: req.body.frameW, height: req.body.frameH }
+    console.log('Framesize:', JSON.parse(frame_size));
+    console.log('Coordinates:', JSON.parse(coordinates));
+
+    frame_size = JSON.parse(frame_size);
+    coordinates = JSON.parse(coordinates);
 
     if (!req.file) {
         return res.status(404).send({ message: "No file found" });
@@ -43,7 +46,7 @@ router.post('/upload-frame', upload.single('frame'), async (req, res) => {
     let frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
 
     try {
-        const results = await Frames.create({ frameName: req.body.frameName, frameUrl, frame_size, coordinates, path: req.file.path });
+        const results = await Frames.create({ frameName, frameUrl, frame_size, coordinates, path: req.file.path });
 
 
         res.send(results);
@@ -55,27 +58,46 @@ router.post('/upload-frame', upload.single('frame'), async (req, res) => {
 });
 
 
-router.post('/upload-image', auth, upload.single('image'), async (req, res) => {
+const cpUpload = upload.fields([
+    { name: 'image', maxCount: 5 },
+]);
 
-    if (!req.file) {
+router.post('/upload-image', auth, cpUpload, async (req, res) => {
+
+    if (!req.files) {
         return res.status(404).send({ message: "No file found" });
     }
 
     if (!req.body.frame_id) return res.status(404).send({ message: "frame id is required" });
 
 
-    let image = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+    let image = `${req.protocol}://${req.get('host')}/${req.files['image'][0].filename}`;
 
     try {
         const results = await Frames.findByIdAndUpdate(req.body.frame_id);
 
-        const baseImagePath = path.join(__dirname, `../${results.path}`);
-        const maskImagePath = path.join(__dirname, `../${req.file.path}`);
-        const outputPath = path.join(__dirname, `../${req.file.path}`);
 
         console.log(results);
 
-        await applyMask(baseImagePath, maskImagePath, outputPath, results.coordinates.x, results.coordinates.y, results.frame_size.width, results.frame_size.height, results.coordinates.width, results.coordinates.height)
+        const baseImagePath = path.join(__dirname, `../${results.path}`);
+        const outputPath = path.join(__dirname, `../${req.files['image'][0].path}`);
+        const corrdinates = await results.coordinates;
+
+        const maskImage = corrdinates.map((coordinate, i) => {
+            return {
+                path: path.join(__dirname, `../${req.files['image'][i].path}`),
+                width: coordinate.width,
+                height: coordinate.height,
+                x: coordinate.x,
+                y: coordinate.y
+            };
+        });
+        await applyMask(baseImagePath, maskImage, outputPath, results.frame_size.width, results.frame_size.height)
+
+
+        await results.uploads.push({ image, user: req.user.id });
+
+        await results.save();
 
         res.send({ results, link: image });
     } catch (error) {
@@ -155,21 +177,24 @@ router.get('get/:id', async (req, res) => {
 
 
 
-async function applyMask(baseImagePath, maskImagePath, outputPath, x, y, baseW, baseH, maskW, maskH) {
+async function applyMask(baseImagePath, maskImages, outputPath, baseW, baseH) {
     try {
         // Load images
         const baseImage = await Jimp.read(baseImagePath);
-        const maskImage = await Jimp.read(maskImagePath);
 
-        console.log(+maskW, +maskH, +baseH, +baseW);
-        console.log(maskW, maskH, baseH, baseW);
+        console.log(baseImagePath, maskImages, outputPath);
 
-        maskImage.resize(+maskW, +maskH);
-        baseImage.resize(+baseW, +baseH);
-
-        baseImage.composite(maskImage, x, y, {
-            mode: Jimp.BLEND_DESTINATION_OVER
-        });
+        // Apply each mask image onto the base image
+        for (let i = 0; i < maskImages.length; i++) {
+            const { path, x, y, width, height } = maskImages[i];
+            console.log(path, x, y, width, height);
+            const maskImage = await Jimp.read(path);
+            maskImage.resize(+width, +height);
+            baseImage.resize(+baseW, +baseH);
+            baseImage.composite(maskImage, x, y, {
+                mode: Jimp.BLEND_DESTINATION_OVER
+            });
+        }
 
         // Save the resulting image
         await baseImage.writeAsync(outputPath);
