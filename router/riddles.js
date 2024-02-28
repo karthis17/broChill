@@ -97,6 +97,34 @@ router.post('/add-comment', auth, async (req, res) => {
     }
 });
 
+router.delete('/delete/:id', auth, async (req, res) => {
 
+    try {
+        await riddles.deleteOne({ _id: req.params.id });
+        res.status(200).json({ message: "Deleted successfully", success: true });
+    } catch (error) {
+        res.status(200).json({ message: error.message, success: false });
+
+    }
+
+});
+
+router.put('/update', auth, async (req, res) => {
+
+    const { question, answer, riddle_id } = req.body;
+
+
+    if (!question || !answer) {
+        return res.status(404).json({ error: " Please provide a question or answer." });
+    }
+
+    try {
+        const ress = await riddles.findByIdAndUpdate(riddle_id, { $set: { question, answer } })
+        res.json(ress);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+
+});
 
 module.exports = router;

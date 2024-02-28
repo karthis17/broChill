@@ -3,7 +3,7 @@ const router = require('express').Router();
 const auth = require('../middelware/auth');
 const multer = require('multer');
 const path = require('path');
-
+const deleteImage = require('../commonFunc/delete.image');
 
 
 const storage = multer.diskStorage({
@@ -20,11 +20,12 @@ router.post('/add-image', upload.single('image'), async (req, res) => {
     if (!req.file) {
         return res.status(404).send({ message: "No file found" });
     }
-    let image = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+    let imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+    let imagePath = req.file.path;
 
 
     try {
-        const result = await Flames.create({ imageUrl: image, flamesWord: req.body.word });
+        const result = await Flames.create({ imageUrl, flamesWord: req.body.word, imagePath });
         res.send(result)
     } catch (error) {
         res.status(500).send({ message: "Error creating image", error: error.message });
@@ -32,7 +33,7 @@ router.post('/add-image', upload.single('image'), async (req, res) => {
 });
 
 
-router.get('/get-all-flames', async (req, res) => {
+router.get('/get-all', async (req, res) => {
     try {
         const result = await Flames.find()
         res.send(result);
@@ -58,6 +59,38 @@ router.post('/', auth, async (req, res) => {
 
     // res.json({ result });
 });
+
+router.delete("/delete/:id", async (req, res) => {
+    try {
+        await Flames.deleteOne({ _id: req.params.id });
+        res.status(200).send({ message: 'result deleted successfully' });
+    } catch (error) {
+        res.status(500).send({ err: error.message });
+    }
+});
+
+router.put("/update", upload.single('image'), async (req, res) => {
+
+    let imageUrl = req.body.image;
+    let imagePath = req.body.imagePath;
+
+    if (req.file) {
+        if (deleteImage(path.join(__dirname, `../${imagePath}`))) {
+
+            imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`
+        }
+
+        imagePath = req.file.path;
+    }
+
+
+    try {
+        const result = await Flames.findByIdAndUpdate(req.body.id, { imageUrl, flamesWord: req.body.word, imagePath });
+        res.send(result)
+    } catch (error) {
+        res.status(500).send({ message: "Error creating image", error: error.message });
+    }
+})
 
 function calculateFLAMES(name1, name2) {
     const flames = ['Friends', 'Love', 'Affection', 'Marriage', 'Enmity', 'Sibling'];

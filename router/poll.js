@@ -217,4 +217,40 @@ router.post('/share', async (req, res) => {
     }
 });
 
+router.delete('/delete/:pollId', async (req, res) => {
+
+    try {
+        await Poll.deleteOne({ _id: req.params.pollId });
+        res.status(200).json({ message: "poll deleted successfully", success: true });
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error", success: false, error: error.message });
+    }
+
+});
+
+router.put('/update', upload.single('question'), async (req, res) => {
+    const { question, options, id } = req.body;
+    console.log(req.body, req.file)
+
+    let qn;
+
+    if (req.file) {
+        qn = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+    } else {
+        qn = question;
+    }
+
+    const optionsArray = Array.isArray(options) ? options : [options];
+
+    try {
+        const poll = await Poll.findByIdAndUpdate(id, { $set: { question: qn, option: optionsArray } });
+
+        res.status(201).json({ message: 'Poll created successfully', poll });
+    } catch (error) {
+
+        console.error('Error creating poll:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;

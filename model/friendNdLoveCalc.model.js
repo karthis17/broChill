@@ -8,6 +8,7 @@ const loveCalc = mongoose.model('loveCalc', {
     minPercentage: { type: Number, required: true },
     maxPercentage: { type: Number, required: true },
     resultImage: { type: String, required: true },
+    filePath: { type: String, required: true },
     text: [{ type: String, required: true }],
     users: [{
         user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -26,6 +27,7 @@ const friendsCalc = mongoose.model('friendCalc', {
     minPercentage: { type: Number, required: true },
     maxPercentage: { type: Number, required: true },
     resultImage: { type: String, required: true },
+    filePath: { type: String, required: true },
     text: [{ type: String, required: true }],
     users: [{
         user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

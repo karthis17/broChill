@@ -198,5 +198,17 @@ router.get('/categories', async (req, res) => {
     }
 });
 
+router.delete("/delete/:id", auth, async function (req, res) {
+
+    try {
+        await Image.deleteOne({ _id: req.params.id })
+        res.status(200).json({ message: "Deleted successfully", success: true });
+    } catch (error) {
+        res.status(200).json({ message: error.message, success: false });
+
+    }
+
+});
+
 
 module.exports = router;

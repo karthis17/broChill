@@ -4,11 +4,12 @@ const multer = require('multer');
 const router = require('express').Router();
 const path = require('path');
 const Jimp = require('jimp');
+const deleteImage = require('../commonFunc/delete.image');
 
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
     filename: function (req, file, callback) {
-        callback(null, file.fieldname + new Date().getMilliseconds() + '-' + Date.now() + path.extname(file.originalname));
+        callback(null, file.fieldname + file.originalname + new Date().getMilliseconds() + '-' + Date.now() + path.extname(file.originalname));
     }
 });
 
@@ -31,13 +32,39 @@ router.get('/get-frames', async (req, res) => {
 router.post('/upload-frame', upload.single('frame'), async (req, res) => {
 
 
-    let { frameName, frame_size, coordinates } = req.body;
+    let { frameName, frame_size, coordinates, texts } = req.body;
+
 
     console.log('Framesize:', JSON.parse(frame_size));
     console.log('Coordinates:', JSON.parse(coordinates));
 
     frame_size = JSON.parse(frame_size);
     coordinates = JSON.parse(coordinates);
+    texts = JSON.parse(texts);
+
+    if (req.file) {
+
+        try {
+            let pathF = path.join(__dirname, `../${req.file.path}`);
+            const image = await Jimp.read(pathF);
+
+            await image.resize(frame_size.width, frame_size.height);
+
+            await image.writeAsync(pathF);
+
+            console.log("Image resized successfully!");
+        } catch (error) {
+            console.error("Error:", error);
+        }
+
+    }
+    texts.forEach((text, i) => {
+        let num = text.text.split(' ').filter(text => text.includes("<fname"));
+        console.log('Num:', num);
+        texts[i]["noOfName"] = num;
+    });
+
+    console.log('ss:', frame_size, 'cc:', coordinates, 'tt:', texts);
 
     if (!req.file) {
         return res.status(404).send({ message: "No file found" });
@@ -46,7 +73,7 @@ router.post('/upload-frame', upload.single('frame'), async (req, res) => {
     let frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
 
     try {
-        const results = await Frames.create({ frameName, frameUrl, frame_size, coordinates, path: req.file.path });
+        const results = await Frames.create({ frameName, frameUrl, frame_size, texts, coordinates, path: req.file.path });
 
 
         res.send(results);
@@ -63,6 +90,8 @@ const cpUpload = upload.fields([
 ]);
 
 router.post('/upload-image', auth, cpUpload, async (req, res) => {
+
+    let { userText } = req.body;
 
     if (!req.files) {
         return res.status(404).send({ message: "No file found" });
@@ -82,6 +111,7 @@ router.post('/upload-image', auth, cpUpload, async (req, res) => {
         const baseImagePath = path.join(__dirname, `../${results.path}`);
         const outputPath = path.join(__dirname, `../${req.files['image'][0].path}`);
         const corrdinates = await results.coordinates;
+        const textCor = await results.texts;
 
         const maskImage = corrdinates.map((coordinate, i) => {
             return {
@@ -92,7 +122,32 @@ router.post('/upload-image', auth, cpUpload, async (req, res) => {
                 y: coordinate.y
             };
         });
-        await applyMask(baseImagePath, maskImage, outputPath, results.frame_size.width, results.frame_size.height)
+
+        let resText = [];
+        let i = 0
+        let j = 0
+        for (let test of textCor) {
+            test.noOfName.forEach((t) => {
+                if (!resText[j]) {
+                    resText[j] = test.text.replace(t, userText[i++]);
+                } else {
+                    resText[j] = resText[j].replace(t, userText[i++]);
+                }
+            });
+            j++;
+        }
+
+        const texts = textCor.map((text, i) => {
+            return {
+                text: resText[i],
+                width: text.width,
+                height: text.height,
+                x: text.x,
+                y: text.y
+            };
+        });
+
+        await applyMask(baseImagePath, maskImage, outputPath, texts, results.frame_size.width, results.frame_size.height)
 
 
         await results.uploads.push({ image, user: req.user.id });
@@ -176,15 +231,86 @@ router.get('get/:id', async (req, res) => {
 });
 
 
+router.put('/update', auth, upload.single('frame'), async (req, res) => {
+    let { frameName, frame_size, coordinates, texts, id, frameUrl, imagePath } = req.body;
 
-async function applyMask(baseImagePath, maskImages, outputPath, baseW, baseH) {
+    console.log('Framesize:', JSON.parse(frame_size));
+    console.log('Coordinates:', JSON.parse(coordinates));
+
+    frame_size = JSON.parse(frame_size);
+    coordinates = JSON.parse(coordinates);
+    if (texts) {
+        texts = JSON.parse(texts);
+    } else {
+        texts = [];
+    }
+
+    texts.forEach((text, i) => {
+        let num = text.text.split(' ').filter(text => text.includes("<fname"));
+        console.log('Num:', num);
+        texts[i]["noOfName"] = num;
+    });
+
+    console.log('ss:', frame_size, 'cc:', coordinates, 'tt:', texts);
+
+    if (req.file) {
+        try {
+            let pathF = path.join(__dirname, `../${req.file.path}`);
+            const image = await Jimp.read(pathF);
+
+            await image.resize(frame_size.width, frame_size.height);
+
+            await image.writeAsync(pathF);
+
+            console.log("Image resized successfully!");
+        } catch (error) {
+            console.error("Error:", error);
+        }
+
+        frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+        let im = path.join(__dirname, `../${imagePath}`)
+        await deleteImage(im);
+        imagePath = req.file.path;
+    }
+
+
     try {
-        // Load images
+
+        const results = await Frames.findByIdAndUpdate(id, { $set: { frameName, frameUrl, frame_size, texts, coordinates, path: imagePath } });
+
+        res.send(results);
+    } catch (error) {
+
+        res.status(500).send("internal error: " + error.message);
+
+    }
+});
+
+router.delete('/delete/:id', async (req, res) => {
+    try {
+
+        const ress = await Frames.findById(req.params.id)
+
+        if (deleteImage(path.join(__dirname, `../${ress.path}`))) {
+
+            await Frames.deleteOne({ _id: req.params.id });
+        } else {
+            res.status(404).send({ error: 'err while deleting image' });
+        }
+        res.send({ message: "result deleted successfully" });
+    } catch (error) {
+        res.status(500).send({ message: "internal error: " + error.message })
+    }
+})
+
+
+async function applyMask(baseImagePath, maskImages, outputPath, texts, baseW, baseH) {
+    try {
         const baseImage = await Jimp.read(baseImagePath);
+        console.log(texts, "sad");
 
         console.log(baseImagePath, maskImages, outputPath);
 
-        // Apply each mask image onto the base image
         for (let i = 0; i < maskImages.length; i++) {
             const { path, x, y, width, height } = maskImages[i];
             console.log(path, x, y, width, height);
@@ -196,9 +322,13 @@ async function applyMask(baseImagePath, maskImages, outputPath, baseW, baseH) {
             });
         }
 
-        // Save the resulting image
-        await baseImage.writeAsync(outputPath);
+        for (let i = 0; i < texts.length; i++) {
+            const { x, y, width, height, text } = texts[i];
+            const font = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
 
+            baseImage.print(font, x, y, text);
+        }
+        await baseImage.writeAsync(outputPath);
 
 
         console.log('Mask applied successfully.');

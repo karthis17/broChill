@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const Quizzes = require('../model/quizzes.model');
 const auth = require('../middelware/auth');
-
+const deleteImage = require('../commonFunc/delete.image');
 
 
 const storage = multer.diskStorage({
@@ -37,31 +37,38 @@ router.post('/add-quizze', async (req, res) => {
     let results = [];
 
 
-    const question = `${req.protocol}://${req.get('host')}/${req.body.question.filename}`
+    const question = `${req.protocol}://${req.get('host')}/${req.body.question.filename}`;
+    const questionPath = req.body.question.path;
 
     for (let i = 0; i < req.body.state1.length; i++) {
         statement_1.push({
             option: `${req.protocol}://${req.get('host')}/${req.body.state1[i].option.filename}`,
-            point: req.body.state1[i].point
+            point: req.body.state1[i].point,
+            imagePath: req.body.state1[i].option.path
         });
         statement_2.push({
             option: `${req.protocol}://${req.get('host')}/${req.body.state2[i].option.filename}`,
-            point: req.body.state2[i].point
+            point: req.body.state2[i].point,
+            imagePath: req.body.state2[i].option.path
+
         });
         statement_3.push({
             option: `${req.protocol}://${req.get('host')}/${req.body.state3[i].option.filename}`,
-            point: req.body.state3[i].point
+            point: req.body.state3[i].point,
+            imagePath: req.body.state3[i].option.path
+
         });
         results.push({
             scoreBoard: `${req.protocol}://${req.get('host')}/${req.body.result[i].resultImg.filename}`,
             minScore: req.body.result[i].minScore,
             maxScore: req.body.result[i].maxScore,
+            imagePath: req.body.result[i].resultImg.path
         });
 
     }
 
     try {
-        const response = await Quizzes.create({ questionImage: question, statement_1, statement_2, statement_3, results });
+        const response = await Quizzes.create({ questionImage: question, statement_1, statement_2, statement_3, results, questionPath });
         res.json(response);
     } catch (error) {
         res.status(500).json(error.message);
@@ -108,6 +115,30 @@ router.post('/get-result', auth, async (req, res) => {
     } catch (error) {
         res.status(500).json(error.message);
     }
+});
+
+router.delete("/delete/:id", auth, async (req, res) => {
+
+    try {
+
+        const ress = await Quizzes.findById(req.params.id);
+
+        deleteImage(path.join(__dirname, `../${ress.questionPath}`));
+
+        for (let i = 0; i < req.body.state1.length; i++) {
+            deleteImage(path.join(__dirname, `../${ress.statement_1[i].imagePath}`))
+            deleteImage(path.join(__dirname, `../${ress.statement_2[i].imagePath}`))
+            deleteImage(path.join(__dirname, `../${ress.statement_3[i].imagePath}`))
+            deleteImage(path.join(__dirname, `../${ress.results[i].imagePath}`))
+        }
+
+        await Quizzes.deleteOne({ _id: req.params.id });
+        res.status(200).json({ message: "Deleted successfully", success: true });
+    } catch (error) {
+        res.status(200).json({ message: error.message, success: false });
+
+    }
+
 });
 
 

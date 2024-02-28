@@ -9,6 +9,14 @@ module.exports = mongoose.model("frames", {
         width: { type: Number, required: true },
         height: { type: Number, required: true }
     },
+    texts: [{
+        x: { type: Number, required: true },
+        y: { type: Number, required: true },
+        width: { type: Number, required: true },
+        height: { type: Number, required: true },
+        text: { type: String, required: true },
+        noOfName: [],
+    }],
     coordinates: [{
         x: { type: Number, required: true },
         y: { type: Number, required: true },

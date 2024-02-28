@@ -3,6 +3,7 @@ const multer = require('multer');
 const router = require('express').Router();
 const path = require('path');
 const guess = require('../model/guessGame.model');
+const deleteImage = require('../commonFunc/delete.image');
 
 
 
@@ -24,12 +25,14 @@ router.post('/upload', cpUpload, async (req, res) => {
 
     // res.json(req.files)
 
-    const { correctOption } = req.body;
+    const { correctOption, questionType, optionsType } = req.body;
 
     let question;
+    let imagePath;
     if (req.files['question']) {
 
         question = `${req.protocol}://${req.get('host')}/${req.files['question'][0].filename}`
+        imagePath = req.files['question'][0].path;
     } else {
         console.log(req.body)
         question = req.body.question;
@@ -50,11 +53,13 @@ router.post('/upload', cpUpload, async (req, res) => {
                 options.push({
                     option: `${req.protocol}://${req.get('host')}/${element.filename}`,
                     answer: true,
+                    imagePath: element.path
                 });
             } else {
                 options.push({
                     option: `${req.protocol}://${req.get('host')}/${element.filename}`,
-                    answer: false
+                    answer: false,
+                    imagePath: element.path
                 });
             }
         });
@@ -80,7 +85,7 @@ router.post('/upload', cpUpload, async (req, res) => {
     }
 
     try {
-        const result = await guess.create({ question, options });
+        const result = await guess.create({ question, options, questionType, optionsType, imagePath });
         res.json(result);
     } catch (error) {
         res.status(500).json(error);
@@ -141,6 +146,94 @@ router.post('/answer', async (req, res) => {
 
 });
 
+router.delete("/delete/:id", async (req, res) => {
+
+    try {
+        const ress = await guess.findById(req.params.id);
+
+        if (ress.questionType === "image") {
+            deleteImage(path.join(__dirname, `../${ress.imagePath}`));
+        }
+
+        if (ress.optionsType === "image") {
+            ress.options.forEach(option => {
+                deleteImage(path.join(__dirname, `../${option.imagePath}`));
+            });
+        }
+
+        await guess.deleteOne({ _id: req.params.id });
+        res.status(200).send({ message: "record deletd successfully." });
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+
+});
+
+router.put("/update", async (req, res) => {
+
+    let { id, imagePath, question, answer, options, questionType, optionsType } = req.params;
+
+
+    if (req.files['question']) {
+
+        question = `${req.protocol}://${req.get('host')}/${req.files['question'][0].filename}`
+        imagePath = req.files['question'][0].path;
+    } else {
+        console.log(req.body)
+        question = req.body.question;
+    }
+
+    if (!correctOption || !question) {
+        return res.status(404).send({ err: "aee", question, correctOption });
+    }
+
+
+    if (req.files['options']) {
+
+        req.files['options'].forEach(element => {
+            if (element.originalname === correctOption) {
+                answer = element;
+                options.push({
+                    option: `${req.protocol}://${req.get('host')}/${element.filename}`,
+                    answer: true,
+                    imagePath: element.path
+                });
+            } else {
+                options.push({
+                    option: `${req.protocol}://${req.get('host')}/${element.filename}`,
+                    answer: false,
+                    imagePath: element.path
+                });
+            }
+        });
+    } else {
+        req.body.options.forEach(item => {
+            if (item === correctOption) {
+                answer = item;
+                options.push({
+                    option: item,
+                    answer: true,
+                });
+            } else {
+                options.push({
+                    option: item,
+                    answer: false
+                });
+            }
+        })
+    }
+
+    if (!answer) {
+        return res.status(404).send({ err: "awser is requried" });
+    }
+
+    try {
+        const result = await guess.create({ question, options, questionType, optionsType, imagePath });
+        res.json(result);
+    } catch (error) {
+        res.status(500).json(error);
+    }
+});
 
 
 module.exports = router;

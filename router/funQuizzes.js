@@ -82,4 +82,36 @@ router.post('/answer', async (req, res) => {
 
 });
 
+router.delete('/delete/:id', async (req, res) => {
+    try {
+        await Quizzes.deleteOne({ _id: req.params.id });
+        res.status(200).send({ message: "record deletd successfully." });
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+
+});
+
+router.put('/update', async (req, res) => {
+    const { id, question, options } = req.body;
+    if (!question) {
+        return res.status(404).json({ error: "question not found" });
+    }
+
+    if (!Array.isArray(options)) {
+        return res.status(404).json({ error: "option must be array with contain option and answer object" });
+
+    }
+
+    try {
+        const ress = await Quizzes.findByIdAndUpdate(id, { $set: { question, options } });
+
+        res.json(ress);
+    } catch (error) {
+
+        res.status(500).json({ error: error.message });
+
+    }
+});
+
 module.exports = router;

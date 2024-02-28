@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 module.exports = mongoose.model("pickKick", {
     question: { type: String, required: true },
+    filePath: { type: String },
     options: [{
         option: { type: String, required: true },
         point: { type: String, required: true },

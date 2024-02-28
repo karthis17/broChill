@@ -1,3 +1,4 @@
+const auth = require('../middelware/auth');
 const { nameFact, nameMeaning } = require('../model/nameMeaning.model');
 const router = require('express').Router();
 
@@ -82,5 +83,86 @@ router.post('/get-name-fact', async (req, res) => {
     }
 
 });
+
+router.get('/name-meaning/get-all', async (req, res) => {
+    try {
+        const ress = await nameMeaning.find();
+        res.send(ress);
+    } catch (error) {
+
+        res.status(500).send({ error: error.message });
+
+    }
+});
+
+router.get('/name-fact/get-all', async (req, res) => {
+    try {
+        const ress = await nameFact.find();
+        res.send(ress);
+    } catch (error) {
+
+        res.status(500).send({ error: error.message });
+
+    }
+});
+
+router.delete("/name-meaning/delete/:id", auth, async function (req, res) {
+
+    try {
+        await nameMeaning.deleteOne({ _id: req.params.id })
+        res.status(200).json({ message: "Deleted successfully", success: true });
+    } catch (error) {
+        res.status(200).json({ message: error.message, success: false });
+
+    }
+
+});
+
+router.delete("/name-fact/delete/:id", auth, async function (req, res) {
+
+    try {
+        await nameFact.deleteOne({ _id: req.params.id })
+        res.status(200).json({ message: "Deleted successfully", success: true });
+    } catch (error) {
+        res.status(200).json({ message: error.message, success: false });
+
+    }
+
+});
+
+router.put("/name-meaning/update", auth, async function (req, res) {
+
+    const { letter, meaning, id } = req.body;
+
+    console.log(letter)
+    if (!letter || !meaning) {
+        res.status(400).send({ error: "please provide a letter and meaning" });
+    }
+
+    try {
+        const result = await nameMeaning.findByIdAndUpdate(id, { $set: { letter, meaning } });
+        res.send(result);
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+
+})
+
+router.put("/name-fact/update", auth, async function (req, res) {
+
+    const { name, fact, id } = req.body;
+
+    if (!name || !fact) {
+        res.status(400).send({ error: "please provide a fact and name" });
+    }
+
+    try {
+        const result = await nameFact.findByIdAndUpdate(id, { $set: { name, fact } });
+        res.send(result);
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+
+})
 
 module.exports = router;

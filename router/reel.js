@@ -3,8 +3,8 @@ const multer = require('multer');
 const path = require('path');
 const reels = require('../model/reels.model');
 const auth = require('../middelware/auth');
-// const Like = require('../model/like.model');
-const Follow = require('../model/follow.model');
+const deleteImage = require('../commonFunc/delete.image');
+const { text } = require('body-parser');
 
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 router.post('/upload-reel', auth, upload.single('reel'), async (req, res) => {
-    console.log(req.body)
+
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
@@ -24,7 +24,13 @@ router.post('/upload-reel', auth, upload.single('reel'), async (req, res) => {
 
         console.log(req.file)
 
-        const { description, category, hashtags, title } = req.body;
+        let { category, hashtags, titleDifLang, descriptionDifLang, title, description } = req.body;
+
+        titleDifLang = JSON.parse(titleDifLang);
+        descriptionDifLang = JSON.parse(descriptionDifLang);
+
+        console.log(titleDifLang, descriptionDifLang)
+
 
         if (!Array.isArray(hashtags)) {
             return res.status(404).json({ message: 'hashtags must be an array' });
@@ -35,8 +41,9 @@ router.post('/upload-reel', auth, upload.single('reel'), async (req, res) => {
             return res.status(400).json({ message: 'Description is required' });
         }
 
-        const filePath = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-        const reel = await reels.create({ category, title, filePath, description, user: req.user.id, hashtags });
+        const fileUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+        const filePath = req.file.path;
+        const reel = await reels.create({ category, titleDifLang, fileUrl, filePath, descriptionDifLang, user: req.user.id, hashtags, title, description });
         console.log(reel);
 
         res.status(201).json(reel);
@@ -62,8 +69,24 @@ router.get('/search', async (req, res) => {
 
 router.get('/get-reel/:id', async (req, res) => {
 
+    const lang = req.query.lang;
+
     try {
         const reel = await reels.findById(req.params.id);
+
+        if (lang) {
+            const title = reel.titleDifLang.find(tit => tit.lang === lang);
+            const description = reel.descriptionDifLang.find(dis => dis.lang === lang);
+
+            reel.title = title ? title.text : reel.title;
+            reel.description = description ? description.text : reel.title;
+
+
+            res.json(reel);
+        } else {
+
+            res.json(reel);
+        }
         res.send(reel)
     } catch (error) {
         res.status(500).json({ message: 'Internal server error', err: error.message });
@@ -73,12 +96,32 @@ router.get('/get-reel/:id', async (req, res) => {
 
 router.get("/get-all", async (req, res) => {
     try {
-        const ress = await reels.find();
-        res.json(ress);
+        const lang = req.query.lang;
+
+        const reelsData = await reels.find();
+
+        if (lang) {
+            let result = await reelsData.map(reel => {
+                const title = reel.titleDifLang.find(tit => tit.lang === lang);
+                const description = reel.descriptionDifLang.find(dis => dis.lang === lang);
+
+                // If title or description is found in the specified language, use its text, otherwise fallback to default
+                reel.title = title ? title.text : reel.title;
+                reel.description = description ? description.text : reel.title;
+
+                return reel;
+            });
+
+            res.json(result);
+        } else {
+
+            res.json(reelsData);
+        }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
+
 
 router.post('/like', auth, async (req, res) => {
     try {
@@ -132,6 +175,63 @@ router.post('/add-comment', auth, async (req, res) => {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
     }
+});
+
+router.delete('/delete/:reelId', auth, async (req, res) => {
+
+
+    try {
+        const reel = await reels.findById(req.params.reelId);
+        let image = path.join(__dirname, `../${await reel.filePath}`);
+
+        if (deleteImage(image)) {
+            await reels.deleteOne({ _id: await reel._id });
+            res.status(200).json({ message: "record deleted successfully" });
+        }
+        else {
+            res.status(400).json({ message: "error while delete file" });
+        }
+
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message, success: false });
+
+    }
+
+});
+
+router.put("/update", auth, upload.single("new_reel"), async (req, res) => {
+
+    console.log(req.body)
+    let { description, category, hashtags, title, id, fileUrl, filePath } = req.body;
+    try {
+        if (req.file) {
+            await deleteImage(path.join(__dirname, `../${filePath}`))
+            fileUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+            filePath = req.file.path;
+        }
+
+        console.log(req.file)
+
+
+        if (!Array.isArray(hashtags)) {
+            return res.status(404).json({ message: 'hashtags must be an array' });
+        }
+
+
+        if (!description) {
+            return res.status(400).json({ message: 'Description is required' });
+        }
+
+        const reel = await reels.findByIdAndUpdate(id, { $set: { category, title, filePath, fileUrl, description, hashtags } });
+        console.log(reel);
+
+        res.status(201).json(reel);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+
 });
 
 

@@ -3,8 +3,7 @@ const multer = require('multer');
 const router = require('express').Router();
 const path = require('path');
 const { friendsCalc, loveCalc } = require('../model/friendNdLoveCalc.model');
-
-
+const deleteImage = require('../commonFunc/delete.image');
 
 
 const storage = multer.diskStorage({
@@ -31,9 +30,10 @@ router.post('/add-love-quotes', upload.single('image'), async (req, res) => {
     }
 
     const resultImage = `${req.protocol}://${req.get('host')}/${req.file.filename}`
+    const filePath = req.file.path;
 
     try {
-        const response = await loveCalc.create({ maxPercentage, minPercentage, text, resultImage });
+        const response = await loveCalc.create({ maxPercentage, minPercentage, text, resultImage, filePath });
         res.send(response);
     } catch (error) {
         res.status(500).send({ error: error.message });
@@ -53,10 +53,11 @@ router.post('/add-friend-quotes', upload.single('image'), async (req, res) => {
         res.status(400).json({ errors: "text must be an array" });
     }
 
-    const resultImage = `${req.protocol}://${req.get('host')}/${req.file.filename}`
+    const resultImage = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+    const filePath = req.file.path;
 
     try {
-        const response = await friendsCalc.create({ maxPercentage, minPercentage, text, resultImage });
+        const response = await friendsCalc.create({ maxPercentage, minPercentage, text, resultImage, filePath });
         res.send(response);
     } catch (error) {
         res.status(500).send({ error: error.message });
@@ -174,6 +175,107 @@ router.post('/friend-calculate', auth, async (req, res) => {
 
 
 
+});
+
+
+router.get('/friendCalc/get-all', async (req, res) => {
+
+    try {
+        const ress = await friendsCalc.find();
+        res.send(ress);
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error ' + error.message });
+    }
+
+});
+
+router.get('/loveCalc/get-all', async (req, res) => {
+
+    try {
+        const ress = await loveCalc.find();
+        res.send(ress);
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error ' + error.message });
+    }
+
+});
+
+router.delete("/friendCalc/delete/:id", async (req, res) => {
+
+    try {
+        await friendsCalc.deleteOne({ _id: req.params.id });
+        res.status(200).json({ message: 'record deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error', message: error.message });
+
+    }
+
+});
+
+router.delete("/loveCalc/delete/:id", async (req, res) => {
+
+    try {
+        await loveCalc.deleteOne({ _id: req.params.id });
+        res.status(200).json({ message: 'record deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error', message: error.message });
+
+    }
+
+});
+
+router.put("/friendCalc/update", upload.single('image'), async (req, res) => {
+    let { maxPercentage, minPercentage, text, id, resultImage, filePath } = req.body;
+
+    if (!maxPercentage || !minPercentage) {
+        res.status(400).json({ errors: "min and max percentage value are required" })
+    }
+
+    if (!Array.isArray(text) || !text) {
+        res.status(400).json({ errors: "text must be an array" });
+    }
+
+    if (req.file) {
+
+        await deleteImage(path.join(__dirname, `../${filePath}`))
+        resultImage = `${req.protocol}://${req.get('host')}/${req.file.filename}`
+        filePath = req.file.path;
+    }
+
+    try {
+        const response = await friendsCalc.findByIdAndUpdate(id, { $set: { maxPercentage, minPercentage, text, resultImage, filePath } });
+        res.send(response);
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+});
+
+router.put("/loveCalc/update", upload.single('image'), async (req, res) => {
+    let { maxPercentage, minPercentage, text, id, image, filePath } = req.body;
+
+    if (!maxPercentage || !minPercentage) {
+        res.status(400).json({ errors: "min and max percentage value are required" })
+    }
+
+    if (!Array.isArray(text) || !text) {
+        res.status(400).json({ errors: "text must be an array" });
+    }
+
+    let resultImage = image;
+
+    if (req.file) {
+
+        await deleteImage(path.join(__dirname, `../${filePath}`))
+        resultImage = `${req.protocol}://${req.get('host')}/${req.file.filename}`
+        filePath = req.file.path;
+    }
+
+    try {
+        const response = await loveCalc.findByIdAndUpdate(id, { $set: { maxPercentage, minPercentage, text, resultImage, filePath } });
+        res.send(response);
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
 });
 
 function calculateLovePercentage(name1, name2) {
