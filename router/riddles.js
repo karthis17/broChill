@@ -6,7 +6,8 @@ const auth = require('../middelware/auth');
 
 router.post("/add-riddle", async (req, res) => {
 
-    const { question, answer } = req.body;
+    const { question, answer, questionDifLang, answerDifLang } = req.body;
+
 
 
     if (!question || !answer) {
@@ -14,7 +15,7 @@ router.post("/add-riddle", async (req, res) => {
     }
 
     try {
-        const ress = await riddles.create({ question, answer })
+        const ress = await riddles.create({ question, answer, questionDifLang, answerDifLang })
         res.json(ress);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -25,10 +26,30 @@ router.post("/add-riddle", async (req, res) => {
 
 router.get('/get-all', async (req, res) => {
 
+    const lang = "kannada";
 
     try {
         const ridles = await riddles.find();
-        res.json(ridles);
+        if (lang) {
+
+            const result = ridles.map(ridle => {
+
+                const question = ridle.questionDifLang.find(tit => tit.lang === lang);
+                const answer = ridle.answerDifLang.find(dis => dis.lang === lang);
+
+                ridle.question = question ? question.text : ridle.question;
+                ridle.answer = answer ? answer.text : ridle.answer;
+
+                return ridle;
+            })
+
+
+
+            res.json(result);
+        } else {
+
+            res.json(ridles);
+        }
     } catch (error) {
 
         res.status(500).json(error);
@@ -43,7 +64,19 @@ router.post('/get-by-id/:id', async (req, res) => {
 
     try {
         const riddle = await riddles.findById(req.params.id);
-        res.json(riddle);
+        if (lang) {
+            const question = riddle.questionDifLang.find(tit => tit.lang === lang);
+            const answer = riddle.answerDifLang.find(dis => dis.lang === lang);
+
+            riddle.question = question ? question.text : riddle.question;
+            riddle.answer = answer ? answer.text : riddle.answer;
+
+
+            res.json(riddle);
+        } else {
+
+            res.json(riddle);
+        }
     } catch (error) {
 
         res.status(500).json(error);
@@ -64,7 +97,10 @@ router.post('/answer', async (req, res) => {
 
     try {
         const result = await riddles.findById(riddle_id);
-        if (result.answer === userAnswer) {
+
+        let checkDifLang = result.answerDifLang.find(answer => { userAnswer === answer.text })
+
+        if (result.answer === userAnswer || checkDifLang.length) {
             res.send({ answer: true });
 
         } else {

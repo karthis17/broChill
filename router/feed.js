@@ -24,7 +24,12 @@ router.post('/upload-feed', auth, upload.single('feed'), async (req, res) => {
 
         console.log(req.file)
 
-        const { description, category, title } = req.body;
+        let { description, category, title, titleDifLang, descriptionDifLang } = req.body;
+
+        titleDifLang = JSON.parse(titleDifLang);
+        descriptionDifLang = JSON.parse(descriptionDifLang);
+
+        console.log(titleDifLang, descriptionDifLang)
 
 
         if (!description) {
@@ -38,7 +43,7 @@ router.post('/upload-feed', auth, upload.single('feed'), async (req, res) => {
 
         const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
         const imagePath = req.file.path;
-        const feed = await feeds.create({ category, title, imagePath, imageUrl, description, user: req.user.id, });
+        const feed = await feeds.create({ category, title, imagePath, imageUrl, description, user: req.user.id, titleDifLang, descriptionDifLang });
         console.log(feed);
 
         res.status(201).json(feed);
@@ -53,9 +58,24 @@ router.post('/upload-feed', auth, upload.single('feed'), async (req, res) => {
 
 router.get('/get-reel/:id', async (req, res) => {
 
+    const lang = req.query.lang;
+
     try {
-        const reel = await feeds.findById(req.params.id);
-        res.send(reel)
+        const feed = await feeds.findById(req.params.id);
+        if (lang) {
+            const title = feed.titleDifLang.find(tit => tit.lang === lang);
+            const description = feed.descriptionDifLang.find(dis => dis.lang === lang);
+
+            feed.title = title ? title.text : feed.title;
+            feed.description = description ? description.text : feed.description;
+
+
+            res.json(feed);
+        } else {
+
+            res.json(feed);
+        }
+        res.send(feed)
     } catch (error) {
         res.status(500).json({ message: 'Internal server error', err: error.message });
     }
@@ -63,9 +83,27 @@ router.get('/get-reel/:id', async (req, res) => {
 });
 
 router.get("/get-all", async (req, res) => {
+    const lang = req.query.lang;
     try {
-        const ress = await feeds.find();
-        res.json(ress);
+        const feed = await feeds.find();
+
+        if (lang) {
+            let result = await feed.map(feed => {
+                const title = feed.titleDifLang.find(tit => tit.lang === lang);
+                const description = feed.descriptionDifLang.find(dis => dis.lang === lang);
+
+                // If title or description is found in the specified language, use its text, otherwise fallback to default
+                feed.title = title ? title.text : feed.title;
+                feed.description = description ? description.text : feed.title;
+
+                return feed;
+            });
+
+            res.json(result);
+        } else {
+
+            res.json(feed);
+        }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

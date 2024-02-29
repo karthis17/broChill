@@ -48,9 +48,29 @@ const upload = multer({ storage: storage });
 
 
 router.get('/get-poll/:id', async (req, res) => {
+
     try {
         const poll = await Poll.findById(req.params.id);
         const votes = await getVotesForOptions(req.params.id)
+        const lang = req.query.lang;
+
+        if (lang) {
+            const question = poll.questionDifLang.find(tit => tit.lang === lang);
+
+            poll.question = question ? question.text : poll.question;
+
+            res.send({
+                poll, votes
+            });
+        } else {
+
+            res.send({
+
+
+                poll, votes
+            });
+        }
+
         res.send({
             poll, votes
         });
@@ -63,10 +83,24 @@ router.get('/get-poll/:id', async (req, res) => {
 
 router.get('/getAll', async (req, res) => {
     try {
+        const lang = req.query.lang;
+
         const poll = await Poll.find();
-        res.send({
-            poll
-        });
+
+        if (lang) {
+            let result = await poll.map(p => {
+                const question = p.questionDifLang.find(tit => tit.lang === lang);
+
+                p.question = question ? question.text : p.question;
+                return p;
+            });
+
+            res.json(result);
+        } else {
+
+            res.json(poll);
+        }
+
     } catch (error) {
 
         res.json({ error: error.message });
@@ -98,11 +132,15 @@ router.post('/vote', auth, async (req, res) => {
 });
 
 router.post('/add-text-poll', upload.single('question'), async (req, res) => {
-    const { question, options } = req.body;
+    let { question, options, questionDifLang } = req.body;
     console.log(req.body, req.file)
 
     let qn;
 
+    if (questionDifLang) {
+        questionDifLang = JSON.parse(questionDifLang);
+
+    }
     if (req.file) {
         qn = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
     } else {
@@ -112,7 +150,7 @@ router.post('/add-text-poll', upload.single('question'), async (req, res) => {
     const optionsArray = Array.isArray(options) ? options : [options];
 
     try {
-        const poll = await Poll.create({ question: qn, option: optionsArray });
+        const poll = await Poll.create({ question: qn, option: optionsArray, questionDifLang });
 
         res.status(201).json({ message: 'Poll created successfully', poll });
     } catch (error) {
@@ -126,7 +164,11 @@ router.post('/add-text-poll', upload.single('question'), async (req, res) => {
 const cpUpload = upload.fields([{ name: 'question', maxCount: 1 }, { name: 'options', maxCount: 10 }]);
 
 router.post('/add-img-poll', cpUpload, async (req, res) => {
-    const { question } = req.body;
+    const { question, questionDifLang } = req.body;
+
+    if (questionDifLang) {
+        questionDifLang = JSON.parse(questionDifLang);
+    }
 
     const optionsArray = []
     req.files['options'].forEach((option) => {
@@ -149,7 +191,7 @@ router.post('/add-img-poll', cpUpload, async (req, res) => {
 
 
     try {
-        const poll = await Poll.create({ question: qn, option: optionsArray });
+        const poll = await Poll.create({ question: qn, option: optionsArray, questionDifLang });
 
         res.status(201).json({ message: 'Poll created successfully', poll });
     } catch (error) {

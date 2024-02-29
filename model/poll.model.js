@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 module.exports = mongoose.model("poll", {
     question: { type: String, required: true },
     option: [{ type: String, required: true }],
+    questionDifLang: Array,
     votes: [{
         votedOption: String,
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

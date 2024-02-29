@@ -22,8 +22,10 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
 
         console.log(req.file)
 
-        const { description, category, title, type } = req.body;
+        let { description, category, title, type, titleDifLang, descriptionDifLang } = req.body;
 
+        titleDifLang = JSON.parse(titleDifLang);
+        descriptionDifLang = JSON.parse(descriptionDifLang);
 
 
         if (!description) {
@@ -31,7 +33,7 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
         }
 
         const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-        const image = await Image.create({ category, imageUrl, description, user: req.user.id, title, type });
+        const image = await Image.create({ category, imageUrl, description, user: req.user.id, title, type, titleDifLang, descriptionDifLang });
         console.log(image);
 
         res.status(201).json(image);
@@ -69,13 +71,29 @@ router.post('/add-funfilter', auth, upload.single('image'), async (req, res) => 
 router.get('/post-category/:category', async (req, res) => {
 
     let { category } = req.params;
-
+    let lang = req.query.lang;
 
     try {
+        const Post = await Image.find({ category: category });
 
+        if (lang) {
+            let result = await Post.map(post => {
+                const title = post.titleDifLang.find(tit => tit.lang === lang);
+                const description = post.descriptionDifLang.find(dis => dis.lang === lang);
 
-        const post = await Image.find({ category: category });
-        res.status(200).json(post)
+                // If title or description is found in the specified language, use its text, otherwise fallback to default
+                post.title = title ? title.text : post.title;
+                post.description = description ? description.text : post.title;
+
+                return post;
+            });
+
+            res.json(result);
+        } else {
+
+            res.json(Post);
+        }
+
 
 
     } catch (error) {

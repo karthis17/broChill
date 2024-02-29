@@ -17,9 +17,23 @@ const upload = multer({ storage: storage });
 
 
 router.get('/get-frames', async (req, res) => {
+    const lang = req.query.lang;
     try {
-        const response = await Frames.find()
-        res.send(response);
+        const response = await Frames.find();
+        if (lang) {
+            let result = await response.map(frame => {
+                const title = frame.titleDifLang.find(tit => tit.lang === lang);
+
+                frame.frameName = title ? title.text : frame.frameName;
+
+                return frame;
+            });
+
+            res.json(result);
+        } else {
+
+            res.json(response);
+        }
 
     } catch (error) {
 
@@ -32,8 +46,10 @@ router.get('/get-frames', async (req, res) => {
 router.post('/upload-frame', upload.single('frame'), async (req, res) => {
 
 
-    let { frameName, frame_size, coordinates, texts } = req.body;
+    let { frameName, frame_size, coordinates, texts, titleDifLang } = req.body;
 
+
+    titleDifLang = JSON.parse(titleDifLang);
 
     console.log('Framesize:', JSON.parse(frame_size));
     console.log('Coordinates:', JSON.parse(coordinates));
@@ -73,7 +89,7 @@ router.post('/upload-frame', upload.single('frame'), async (req, res) => {
     let frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
 
     try {
-        const results = await Frames.create({ frameName, frameUrl, frame_size, texts, coordinates, path: req.file.path });
+        const results = await Frames.create({ frameName, frameUrl, frame_size, texts, coordinates, path: req.file.path, titleDifLang });
 
 
         res.send(results);
@@ -212,7 +228,7 @@ router.post('/share', async (req, res) => {
 
     try {
         const response = await Frames.findByIdAndUpdate(req.body.frame_id, { $inc: { shares: 1 } });
-        res.status(200).json(response);
+        res.status(200).json({ success: true });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
@@ -220,10 +236,21 @@ router.post('/share', async (req, res) => {
 });
 
 router.get('get/:id', async (req, res) => {
+    const lang = req.query.lang;
 
     try {
         const response = await Frames.findById(req.params.id);
-        res.send(response);
+        if (lang) {
+            const title = response.titleDifLang.find(tit => tit.lang === lang);
+
+            response.frameName = title ? title.text : response.frameName;
+
+
+            res.json(response);
+        } else {
+
+            res.json(response);
+        }
     } catch (error) {
         res.status(500).json({ message: "Internal server error", error: error.message });
     }
@@ -278,7 +305,7 @@ router.put('/update', auth, upload.single('frame'), async (req, res) => {
 
         const results = await Frames.findByIdAndUpdate(id, { $set: { frameName, frameUrl, frame_size, texts, coordinates, path: imagePath } });
 
-        res.send(results);
+        res.send({ success: true, message: "record updated successfully." });
     } catch (error) {
 
         res.status(500).send("internal error: " + error.message);

@@ -1,13 +1,12 @@
 const router = require('express').Router();
-const multer = require('multer');
-const path = require('path');
 const Quizzes = require('../model/funQuizzes.model');
-const auth = require('../middelware/auth');
 
 
 router.post('/add-question', async (req, res) => {
 
-    const { question, options } = req.body;
+    let { question, options, questionDifLang } = req.body;
+
+
     if (!question) {
         return res.status(404).json({ error: "question not found" });
     }
@@ -18,7 +17,7 @@ router.post('/add-question', async (req, res) => {
     }
 
     try {
-        const ress = await Quizzes.create({ question, options });
+        const ress = await Quizzes.create({ question, options, questionDifLang });
 
         res.json(ress);
     } catch (error) {
@@ -32,10 +31,23 @@ router.post('/add-question', async (req, res) => {
 
 router.get('/get-all', async (req, res) => {
 
+    const lang = req.query.lang;
 
     try {
         const questions = await Quizzes.find();
-        res.json(questions);
+        if (lang) {
+            let result = await questions.map(p => {
+                const question = p.questionDifLang.find(tit => tit.lang === lang);
+
+                p.question = question ? question.text : p.question;
+                return p;
+            });
+
+            res.json(result);
+        } else {
+
+            res.json(questions);
+        }
     } catch (error) {
 
         res.status(500).json(error);
@@ -46,10 +58,17 @@ router.get('/get-all', async (req, res) => {
 
 
 router.post('/get-by-id/:id', async (req, res) => {
+    const lang = req.query.lang;
 
 
     try {
         const questions = await Quizzes.findById(req.params.id);
+        if (lang) {
+            const question = questions.questionDifLang.find(tit => tit.lang === lang);
+
+            questions.question = question ? question.text : questions.question;
+
+        }
         res.json(questions);
     } catch (error) {
 

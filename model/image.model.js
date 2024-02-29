@@ -4,6 +4,8 @@ module.exports = mongoose.model("Post", {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     description: { type: String, required: true },
     title: { type: String, required: true },
+    titleDifLang: Array,
+    descriptionDifLang: Array,
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
     imageUrl: { type: String, required: true },
     type: { type: String, required: true },

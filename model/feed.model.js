@@ -14,5 +14,7 @@ module.exports = mongoose.model("feed", {
         text: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
-    createdAt: { type: Date, default: Date.now }
+    titleDifLang: Array,
+    descriptionDifLang: Array,
+    createdAt: { type: Date, default: Date.now },
 });

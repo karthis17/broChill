@@ -16,6 +16,7 @@ const feedRouter = require("./router/feed");
 const reelRouter = require("./router/reel");
 const percentageTypeRouter = require("./router/percentageType");
 const RandImgRouter = require("./router/randomImage");
+const RandtxtRouter = require("./router/randomText");
 const calc = require("./router/friendship-love- calculator");
 const cors = require("cors");
 const path = require("path");
@@ -51,6 +52,7 @@ app.use("/api/feeds", feedRouter);
 app.use("/api/pick-and-kick", pickRouter);
 app.use("/api/love-friendship-calc", calc);
 app.use('/api/random-image', RandImgRouter);
+app.use('/api/random-text', RandtxtRouter);
 app.use('/api/percentage-type', percentageTypeRouter);
 
 mongoose.connect(process.env.MONG_URL).then(() => {

@@ -25,7 +25,13 @@ router.post('/upload', cpUpload, async (req, res) => {
 
     // res.json(req.files)
 
-    const { correctOption, questionType, optionsType } = req.body;
+    let { correctOption, questionType, optionsType, questionDifLang } = req.body;
+
+
+    if (questionDifLang) {
+
+        questionDifLang = JSON.parse(questionDifLang);
+    }
 
     let question;
     let imagePath;
@@ -85,7 +91,7 @@ router.post('/upload', cpUpload, async (req, res) => {
     }
 
     try {
-        const result = await guess.create({ question, options, questionType, optionsType, imagePath });
+        const result = await guess.create({ question, options, questionType, optionsType, imagePath, questionDifLang });
         res.json(result);
     } catch (error) {
         res.status(500).json(error);
@@ -96,10 +102,23 @@ router.post('/upload', cpUpload, async (req, res) => {
 
 router.get('/get-all', async (req, res) => {
 
+    const lang = req.query.lang;
 
     try {
         const questions = await guess.find();
-        res.json(questions);
+        if (lang) {
+            let result = await questions.map(p => {
+                const question = p.questionDifLang.find(tit => tit.lang === lang);
+
+                p.question = question ? question.text : p.question;
+                return p;
+            });
+
+            res.json(result);
+        } else {
+
+            res.json(questions);
+        }
     } catch (error) {
 
         res.status(500).json(error);
@@ -111,9 +130,16 @@ router.get('/get-all', async (req, res) => {
 
 router.post('/get-by-id/:id', async (req, res) => {
 
+    const lang = req.query.lang;
 
     try {
         const questions = await guess.findById(req.params.id);
+        if (lang) {
+            const question = questions.questionDifLang.find(tit => tit.lang === lang);
+
+            questions.question = question ? question.text : questions.question;
+
+        }
         res.json(questions);
     } catch (error) {
 

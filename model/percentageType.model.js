@@ -3,6 +3,7 @@ const { default: mongoose } = require("mongoose");
 module.exports = mongoose.model('percentageType', {
 
     question: { type: String, required: true },
+    questionDifLang: Array,
     result: [{
         rangeFrom: { type: Number, required: true },
         rangeTo: { type: Number, required: true },

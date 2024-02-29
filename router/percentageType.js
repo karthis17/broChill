@@ -1,29 +1,16 @@
 const Percentage = require('../model/percentageType.model');
 const router = require('express').Router();
 const auth = require('../middelware/auth');
-const multer = require('multer');
-const path = require('path');
-
-
-
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + file.originalname + new Date().getMilliseconds() + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
-
 
 
 router.post("/add-question", async (req, res) => {
 
 
-    const { question, result } = req.body;
+    let { question, result, questionDifLang } = req.body;
+
 
     try {
-        const ress = await Percentage.create({ question, result });
+        const ress = await Percentage.create({ question, result, questionDifLang });
         res.send(ress);
     } catch (error) {
         console.error(error);
@@ -37,6 +24,14 @@ router.get('/question/:id', async (req, res) => {
 
     try {
         const ress = await Percentage.findById(req.params.id);
+        const lang = req.query.lang;
+
+        if (lang) {
+            const question = ress.questionDifLang.find(tit => tit.lang === lang);
+
+            ress.question = question ? question.text : ress.question;
+
+        }
         res.send(ress);
     } catch (error) {
 
@@ -48,8 +43,22 @@ router.get('/question/:id', async (req, res) => {
 
 router.get('/get-all', async (req, res) => {
     try {
+        const lang = req.query.lang;
+
         const result = await Percentage.find();
-        res.send(result);
+        if (lang) {
+            let ress = await result.map(p => {
+                const question = p.questionDifLang.find(tit => tit.lang === lang);
+
+                p.question = question ? question.text : p.question;
+                return p;
+            });
+
+            res.json(ress);
+        } else {
+
+            res.json(result);
+        }
     } catch (error) {
 
         res.status(500).send(error.message);
@@ -152,7 +161,7 @@ router.delete('/delete/:id', async (req, res) => {
 });
 
 
-router.put('/update', upload.single('frame'), async (req, res) => {
+router.put('/update', async (req, res) => {
 
     const { question, result, id } = req.body;
 

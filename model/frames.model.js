@@ -29,7 +29,7 @@ module.exports = mongoose.model("frames", {
         createdAt: { type: Date, default: Date.now() }
 
     }],
-
+    titleDifLang: Array,
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
     shares: { type: Number, default: 0 },
     comments: [{
