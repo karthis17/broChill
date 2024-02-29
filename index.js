@@ -12,8 +12,10 @@ const nameRouter = require("./router/nameMeaningNdFact");
 const guessRouter = require("./router/guessGame");
 const funQuRouter = require("./router/funQuizzes");
 const riddleRouter = require("./router/riddles");
-const reelRouter = require("./router/reel");
 const feedRouter = require("./router/feed");
+const reelRouter = require("./router/reel");
+const percentageTypeRouter = require("./router/percentageType");
+const RandImgRouter = require("./router/randomImage");
 const calc = require("./router/friendship-love- calculator");
 const cors = require("cors");
 const path = require("path");
@@ -25,7 +27,7 @@ const port = 3000;
 
 app.use(cors())
 
-// app.use(express.json());
+app.use(express.json());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -48,6 +50,8 @@ app.use("/api/reels", reelRouter);
 app.use("/api/feeds", feedRouter);
 app.use("/api/pick-and-kick", pickRouter);
 app.use("/api/love-friendship-calc", calc);
+app.use('/api/random-image', RandImgRouter);
+app.use('/api/percentage-type', percentageTypeRouter);
 
 mongoose.connect(process.env.MONG_URL).then(() => {
     app.listen(port, () => {
