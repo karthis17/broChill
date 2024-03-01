@@ -7,7 +7,8 @@ module.exports = mongoose.model('percentageType', {
     result: [{
         rangeFrom: { type: Number, required: true },
         rangeTo: { type: Number, required: true },
-        text: { type: String, required: true }
+        imageUrl: { type: String, required: true },
+        imagePath: { type: String, required: true }
     }
     ],
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 module.exports = mongoose.model("feed", {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     description: { type: String, required: true },
-    category: { type: String, required: true },
+    category: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
     title: { type: String, required: true },
     imageUrl: { type: String, required: true },
     imagePath: { type: String, required: true },

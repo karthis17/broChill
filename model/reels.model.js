@@ -6,7 +6,7 @@ module.exports = mongoose.model("reel", {
     description: { type: String, required: true },
     titleDifLang: Array,
     descriptionDifLang: Array,
-    category: { type: String },
+    category: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
     hashtags: [{ type: String, required: true }],
     fileUrl: { type: String, required: true },
     filePath: { type: String, required: true },

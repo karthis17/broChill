@@ -142,15 +142,21 @@ router.post('/upload-image', auth, cpUpload, async (req, res) => {
         let resText = [];
         let i = 0
         let j = 0
+
         for (let test of textCor) {
-            test.noOfName.forEach((t) => {
-                if (!resText[j]) {
-                    resText[j] = test.text.replace(t, userText[i++]);
-                } else {
-                    resText[j] = resText[j].replace(t, userText[i++]);
-                }
-            });
-            j++;
+            if (test.noOfName.length > 0) {
+                test.noOfName.forEach((t) => {
+                    if (!resText[j]) {
+                        resText[j] = test.text.replace(t, userText[i++]);
+                    } else {
+                        resText[j] = resText[j].replace(t, userText[i++]);
+                    }
+                });
+                j++;
+            } else {
+
+                resText.push(test.text);
+            }
         }
 
         const texts = textCor.map((text, i) => {

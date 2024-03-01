@@ -1,13 +1,53 @@
 const Percentage = require('../model/percentageType.model');
 const router = require('express').Router();
 const auth = require('../middelware/auth');
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+    destination: './uploads/', // Specify the upload directory
+    filename: function (req, file, callback) {
+        callback(null, file.fieldname + file.originalname + Math.random() * 1000 + new Date().getMilliseconds() + '-' + Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storage });
 
 
-router.post("/add-question", async (req, res) => {
+const cpUpload = upload.fields([
+    { name: 'image', maxCount: 20 },
+]);
+
+
+router.post("/add-question", cpUpload, async (req, res) => {
 
 
     let { question, result, questionDifLang } = req.body;
 
+    if (questionDifLang) {
+        questionDifLang = JSON.parse(questionDifLang);
+    }
+
+    if (result) {
+        result = JSON.parse(result);
+
+    }
+
+    if (!req.files) {
+        res.status(404).send({ message: "image not found" })
+    }
+
+    if (req.files['image'].length !== result.length) {
+        res.status(404).send({ message: "image not found" })
+
+    }
+
+    result.forEach((element, i) => {
+        let image = `${req.protocol}://${req.get('host')}/${req.files['image'][i].filename}`;
+
+        result[i].imageUrl = image;
+        result[i].imagePath = req.files['image'][i].path;
+    });
 
     try {
         const ress = await Percentage.create({ question, result, questionDifLang });
@@ -65,9 +105,9 @@ router.get('/get-all', async (req, res) => {
     }
 });
 
-router.post('/result', async (req, res) => {
+router.get('/result/:id', async (req, res) => {
 
-    const { range, id } = req.body;
+    const { id } = req.params;
 
     try {
         const document = await Percentage.findById(id);
@@ -75,15 +115,55 @@ router.post('/result', async (req, res) => {
             res.status(404).send({ message: "No document found with the provided ID." });
         }
 
+        const randomNumber = Math.floor(Math.random() * 100) + 1;
+
         const result = document.result.find(item => {
-            return item.rangeFrom < range && item.rangeTo > range;
+            return item.rangeFrom <= randomNumber && item.rangeTo > randomNumber;
         });
 
         if (result) {
-            res.send({ text: result.text, _id: id });
+            res.send({ result: result.imageUrl, _id: id });
         } else {
             res.status(404).send({ message: "No text found for the given range." });
         }
+
+
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+});
+
+
+router.get('/result-double-percentage/:id', async (req, res) => {
+
+    const { id } = req.params;
+
+    try {
+        const document = await Percentage.findById(id);
+        if (!document) {
+            res.status(404).send({ message: "No document found with the provided ID." });
+        }
+
+        const results = [];
+
+        for (let i = 0; i < 2; i++) {
+
+            const randomNumber = Math.floor(Math.random() * 100) + 1;
+
+            results[i] = document.result.find(item => {
+                return item.rangeFrom <= randomNumber && item.rangeTo > randomNumber;
+            });
+            console.log(randomNumber);
+        }
+
+        if (results) {
+            res.send({ result1: results[0].imageUrl, result2: results[1].imageUrl, _id: id });
+        } else {
+            res.status(404).send({ message: "No text found for the given range." });
+        }
+
+
     } catch (err) {
         console.error(err);
         throw err;

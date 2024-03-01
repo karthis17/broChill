@@ -82,6 +82,17 @@ router.get('/get-reel/:id', async (req, res) => {
 
 });
 
+router.get('/category/:id', async (req, res) => {
+    try {
+        const ress = await feeds.find({ category: req.params.id });
+        console.log(ress);
+        res.json(ress);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 router.get("/get-all", async (req, res) => {
     const lang = req.query.lang;
     try {

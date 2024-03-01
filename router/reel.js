@@ -67,6 +67,16 @@ router.get('/search', async (req, res) => {
 });
 
 
+router.get('/category/:id', async (req, res) => {
+    try {
+        const ress = await reels.find({ category: req.params.id });
+        res.json(ress);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 router.get('/get-reel/:id', async (req, res) => {
 
     const lang = req.query.lang;
