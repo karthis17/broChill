@@ -4,6 +4,18 @@ module.exports = mongoose.model('randomText', {
 
     question: { type: String, required: true },
     texts: [{ type: String, required: true }],
+    frameUrl: { type: String, required: true },
+    path: { type: String, required: true },
+    frame_size: {
+        width: { type: Number, required: true },
+        height: { type: Number, required: true }
+    },
+    coordinates: [{
+        x: { type: Number, required: true },
+        y: { type: Number, required: true },
+        width: { type: Number, required: true },
+        height: { type: Number, required: true }
+    }],
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
     shares: { type: Number, default: 0 },
     comments: [{

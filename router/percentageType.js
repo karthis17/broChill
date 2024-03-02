@@ -3,6 +3,7 @@ const router = require('express').Router();
 const auth = require('../middelware/auth');
 const multer = require('multer');
 const path = require('path');
+const Jimp = require('jimp')
 
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
@@ -14,43 +15,49 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 
-const cpUpload = upload.fields([
-    { name: 'image', maxCount: 20 },
-]);
 
+router.post("/add-single-frame", upload.single('frame'), async (req, res) => {
 
-router.post("/add-question", cpUpload, async (req, res) => {
-
-
-    let { question, result, questionDifLang } = req.body;
+    console.log(req.body)
+    let { question, frame_size, coordinates, questionDifLang } = req.body;
 
     if (questionDifLang) {
         questionDifLang = JSON.parse(questionDifLang);
     }
 
-    if (result) {
-        result = JSON.parse(result);
-
+    if (frame_size) {
+        frame_size = JSON.parse(frame_size);
     }
 
-    if (!req.files) {
-        res.status(404).send({ message: "image not found" })
+    if (coordinates) {
+        coordinates = JSON.parse(coordinates);
     }
 
-    if (req.files['image'].length !== result.length) {
-        res.status(404).send({ message: "image not found" })
 
+    if (req.file) {
+
+        try {
+            let pathF = path.join(__dirname, `../${req.file.path}`);
+            const image = await Jimp.read(pathF);
+
+            await image.resize(frame_size.width, frame_size.height);
+
+            await image.writeAsync(pathF);
+
+            console.log("Image resized successfully!");
+        } catch (error) {
+            console.error("Error:", error);
+        }
+
+    } else {
+
+        return res.status(404).send({ message: "No file found" });
     }
 
-    result.forEach((element, i) => {
-        let image = `${req.protocol}://${req.get('host')}/${req.files['image'][i].filename}`;
-
-        result[i].imageUrl = image;
-        result[i].imagePath = req.files['image'][i].path;
-    });
+    let frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
 
     try {
-        const ress = await Percentage.create({ question, result, questionDifLang });
+        const ress = await Percentage.create({ question, questionDifLang, frame: { frameUrl, path: req.file.path, coordinates, frame_size } });
         res.send(ress);
     } catch (error) {
         console.error(error);
@@ -60,21 +67,47 @@ router.post("/add-question", cpUpload, async (req, res) => {
 });
 
 
-router.get('/question/:id', async (req, res) => {
-
+const cpUpload = upload.fields([{ name: 'frame', maxCount: 2 }]);
+router.post("/add-frame", cpUpload, async (req, res) => {
     try {
-        const ress = await Percentage.findById(req.params.id);
-        const lang = req.query.lang;
+        console.log(req.body);
+        let { question, frames, questionDifLang } = req.body;
 
-        if (lang) {
-            const question = ress.questionDifLang.find(tit => tit.lang === lang);
-
-            ress.question = question ? question.text : ress.question;
-
+        if (frames) {
+            frames = JSON.parse(frames);
         }
+
+        if (questionDifLang) {
+            questionDifLang = JSON.parse(questionDifLang);
+        }
+
+        if (!req.files || !req.files['frame']) {
+            return res.status(404).send({ message: "No file found" });
+        }
+
+        const framePromises = req.files['frame'].map(async (frame1, i) => {
+            let frameUrl = `${req.protocol}://${req.get('host')}/${frame1.filename}`;
+            frames[i]['frameUrl'] = frameUrl;
+            console.log(frames[i]['frameUrl'])
+            frames[i]['path'] = frame1.path;
+
+            try {
+                let pathF = path.join(__dirname, `../${frame1.path}`);
+                const image = await Jimp.read(pathF);
+                await image.resize(frames[i].frame_size.width, frames[i].frame_size.height);
+                await image.writeAsync(pathF);
+                console.log("Image resized successfully!");
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        });
+
+        await Promise.all(framePromises);
+
+        const ress = await Percentage.create({ question, questionDifLang, frames });
         res.send(ress);
     } catch (error) {
-
+        console.error(error);
         res.status(500).send(error.message);
     }
 
@@ -105,70 +138,7 @@ router.get('/get-all', async (req, res) => {
     }
 });
 
-router.get('/result/:id', async (req, res) => {
 
-    const { id } = req.params;
-
-    try {
-        const document = await Percentage.findById(id);
-        if (!document) {
-            res.status(404).send({ message: "No document found with the provided ID." });
-        }
-
-        const randomNumber = Math.floor(Math.random() * 100) + 1;
-
-        const result = document.result.find(item => {
-            return item.rangeFrom <= randomNumber && item.rangeTo > randomNumber;
-        });
-
-        if (result) {
-            res.send({ result: result.imageUrl, _id: id });
-        } else {
-            res.status(404).send({ message: "No text found for the given range." });
-        }
-
-
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
-});
-
-
-router.get('/result-double-percentage/:id', async (req, res) => {
-
-    const { id } = req.params;
-
-    try {
-        const document = await Percentage.findById(id);
-        if (!document) {
-            res.status(404).send({ message: "No document found with the provided ID." });
-        }
-
-        const results = [];
-
-        for (let i = 0; i < 2; i++) {
-
-            const randomNumber = Math.floor(Math.random() * 100) + 1;
-
-            results[i] = document.result.find(item => {
-                return item.rangeFrom <= randomNumber && item.rangeTo > randomNumber;
-            });
-            console.log(randomNumber);
-        }
-
-        if (results) {
-            res.send({ result1: results[0].imageUrl, result2: results[1].imageUrl, _id: id });
-        } else {
-            res.status(404).send({ message: "No text found for the given range." });
-        }
-
-
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
-});
 
 
 router.post('/likes', auth, async (req, res) => {
@@ -198,6 +168,51 @@ router.post('/likes', auth, async (req, res) => {
 });
 
 
+// router.get('/genarate-single/:id', async (req, res) => {
+
+//     try {
+//         const ress = await Percentage.findById(req.params.id);
+
+//         const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
+//         const baseImage = path.join(__dirname, `../${await ress.frame[0].path}`);
+//         const coord = await ress.frame[0].coordinates;
+//         const outputPath = path.join(__dirname, `../uploads/${req.params.id}.png`);
+
+//         await applyMask(baseImage, outputPath, randomNumber, coord);
+//         res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${`${req.params.id}.png`}` });
+//     } catch (error) {
+
+//         res.status(500).send(error.message);
+//     }
+
+// });
+
+
+router.get('/genarate/:id', async (req, res) => {
+
+    try {
+        const ress = await Percentage.findById(req.params.id);
+
+        const result = await Promise.all(ress.frames.map(async (frame, i) => {
+            const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
+            const baseImage = path.join(__dirname, `../${await frame.path}`);
+            const coord = await frame.coordinates;
+            const outputPath = path.join(__dirname, `../uploads/${req.params.id + await frame._id}.png`);
+
+            // await the result of applyMask
+            await applyMask(baseImage, outputPath, randomNumber, coord);
+
+            return {
+                result1: `${req.protocol}://${req.get('host')}/${`${req.params.id + await frame._id}.png`}`
+            };
+        }));
+
+        res.send({ _id: req.params.id, result });
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+
+});
 
 
 router.post('/share', async (req, res) => {
@@ -240,19 +255,86 @@ router.delete('/delete/:id', async (req, res) => {
     }
 });
 
+const cpUpload1 = upload.fields([{ name: 'frame', maxCount: 2 }]);
 
-router.put('/update', async (req, res) => {
-
-    const { question, result, id } = req.body;
+router.put('/update', cpUpload1, async (req, res) => {
 
     try {
-        const ress = await Percentage.findByIdAndUpdate(id, { $set: { question, result } });
+        console.log(req.body);
+        let { question, frames, questionDifLang, id } = req.body;
+
+        if (frames) {
+            frames = JSON.parse(frames);
+        }
+
+        if (questionDifLang) {
+            questionDifLang = JSON.parse(questionDifLang);
+        }
+        let framePromises;
+        if (req.files['frame']) {
+            framePromises = req.files['frame'].map(async (frame1, i) => {
+                let frameUrl = `${req.protocol}://${req.get('host')}/${frame1.filename}`;
+                frames[i]['frameUrl'] = frameUrl;
+                console.log(frames[i]['frameUrl'])
+                frames[i]['path'] = frame1.path;
+
+                try {
+                    let pathF = path.join(__dirname, `../${frame1.path}`);
+                    const image = await Jimp.read(pathF);
+                    await image.resize(frames[i].frame_size.width, frames[i].frame_size.height);
+                    await image.writeAsync(pathF);
+                    console.log("Image resized successfully!");
+                } catch (error) {
+                    console.error("Error:", error);
+                }
+            });
+
+            await Promise.all(framePromises);
+        }
+
+
+
+        const ress = await Percentage.findByIdAndUpdate(id, { $set: { question, questionDifLang, frames } });
         res.send(ress);
     } catch (error) {
         console.error(error);
         res.status(500).send(error.message);
     }
 
+
 })
+
+
+async function applyMask(baseImagePath, outputPath, text, coordinates) {
+    try {
+        const image = await Jimp.read(baseImagePath);
+
+        // Define the text properties
+        const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK); // Load black font
+        const { x, y, width, height } = coordinates;
+
+        // Calculate the center coordinates within the specified region
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+
+        // Measure text width and height
+        const textWidth = Jimp.measureText(font, text);
+        const textHeight = Jimp.measureTextHeight(font, text);
+
+        // Calculate the starting position of the text to achieve center alignment
+        const textX = centerX - textWidth / 2;
+        const textY = centerY - textHeight / 2;
+
+        // Print the text in the center of the region
+        image.print(font, textX, textY, text);
+
+        // Save the modified image
+        await image.writeAsync(outputPath);
+
+        console.log("Text overlay added successfully.");
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
 
 module.exports = router;

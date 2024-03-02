@@ -9,7 +9,7 @@ const deleteImage = require('../commonFunc/delete.image');
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
     filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + file.originalname + '-' + Date.now() + path.extname(file.originalname));
+        callback(null, file.fieldname + '-' + file.originalname + Math.random() * 9090982 + '-' + Date.now() + path.extname(file.originalname));
     }
 });
 
@@ -67,10 +67,13 @@ router.post('/add-quizze', async (req, res) => {
 
     }
 
+    console.log(statement_1, statement_2, statement_3, results);
+
     try {
         const response = await Quizzes.create({ questionImage: question, statement_1, statement_2, statement_3, results, questionPath });
         res.json(response);
     } catch (error) {
+        console.error(error);
         res.status(500).json(error.message);
     }
 
