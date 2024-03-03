@@ -1,30 +1,21 @@
 const auth = require('../middelware/auth');
-const multer = require('multer');
 const router = require('express').Router();
-const path = require('path');
+
 const pickAndKick = require('../model/pickOneKickOne.model');
-const deleteImage = require('../commonFunc/delete.image');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
 
 
-router.post('/add-question', upload.single('question'), async (req, res) => {
+router.post('/add-question', uploadFile.single('question'), async (req, res) => {
 
     const { option1, point1, option2, point2 } = req.body;
     let question;
-    let filePath;
+  
 
     if (req.file) {
-        question = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-        filePath = req.file.path;
+        question = await uploadAndGetFirebaseUrl(req);
+        
 
     } else {
         question = req.body.question;
@@ -35,7 +26,7 @@ router.post('/add-question', upload.single('question'), async (req, res) => {
 
     try {
 
-        const result = await pickAndKick.create({ question, options, filePath });
+        const result = await pickAndKick.create({ question, options });
 
         res.json(result);
 
@@ -94,14 +85,9 @@ router.post('/play', async (req, res) => {
 router.delete("/delete/:id", auth, async function (req, res) {
 
     try {
-        const pk = await pickAndKick.findById(req.params.id);
-
-        if (await deleteImage(pk.filePath)) {
 
             await pickAndKick.deleteOne({ _id: req.params.id })
-        } else {
-            return res.status(404).json({ message: "error while deleting" });
-        }
+    
         res.status(200).json({ message: "Deleted successfully", success: true });
     } catch (error) {
         res.status(200).json({ message: error.message, success: false });
@@ -110,19 +96,12 @@ router.delete("/delete/:id", auth, async function (req, res) {
 
 });
 
-router.put("/update", auth, upload.single('question'), async (req, res) => {
-    let { option1, point1, option2, point2, id, filePath } = req.body;
+router.put("/update", auth, uploadFile.single('question'), async (req, res) => {
+    let { option1, point1, option2, point2, id } = req.body;
     let question;
 
     if (req.file) {
-        question = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-
-        if (deleteImage(path.join(__dirname, `../${filePath}`))) {
-
-            filePath = req.file.path;
-        } else {
-            return res.status(404).send({ message: "Error while deleting image" })
-        }
+        question = await uploadAndGetFirebaseUrl(req);
 
 
     } else {
@@ -134,7 +113,7 @@ router.put("/update", auth, upload.single('question'), async (req, res) => {
 
     try {
 
-        const result = await pickAndKick.findByIdAndUpdate(id, { $set: { question, options, filePath } });
+        const result = await pickAndKick.findByIdAndUpdate(id, { $set: { question, options } });
 
         res.json(result);
 

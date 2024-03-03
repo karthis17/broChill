@@ -1,22 +1,9 @@
 const auth = require('../middelware/auth');
-const multer = require('multer');
 const router = require('express').Router();
-const path = require('path');
 const { friendsCalc, loveCalc } = require('../model/friendNdLoveCalc.model');
-const deleteImage = require('../commonFunc/delete.image');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
-
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
-
-
-router.post('/add-love-quotes', upload.single('image'), async (req, res) => {
+router.post('/add-love-quotes', uploadFile.single('image'), async (req, res) => {
 
     const { maxPercentage, minPercentage, text } = req.body;
     console.log(req.file)
@@ -29,11 +16,10 @@ router.post('/add-love-quotes', upload.single('image'), async (req, res) => {
         res.status(400).json({ errors: "text must be an array" });
     }
 
-    const resultImage = `${req.protocol}://${req.get('host')}/${req.file.filename}`
-    const filePath = req.file.path;
+    const resultImage = await uploadAndGetFirebaseUrl(req)
 
     try {
-        const response = await loveCalc.create({ maxPercentage, minPercentage, text, resultImage, filePath });
+        const response = await loveCalc.create({ maxPercentage, minPercentage, text, resultImage });
         res.send(response);
     } catch (error) {
         res.status(500).send({ error: error.message });
@@ -41,7 +27,7 @@ router.post('/add-love-quotes', upload.single('image'), async (req, res) => {
 });
 
 
-router.post('/add-friend-quotes', upload.single('image'), async (req, res) => {
+router.post('/add-friend-quotes', uploadFile.single('image'), async (req, res) => {
 
     const { maxPercentage, minPercentage, text } = req.body;
 
@@ -53,11 +39,10 @@ router.post('/add-friend-quotes', upload.single('image'), async (req, res) => {
         res.status(400).json({ errors: "text must be an array" });
     }
 
-    const resultImage = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-    const filePath = req.file.path;
+    const resultImage = await uploadAndGetFirebaseUrl(req);
 
     try {
-        const response = await friendsCalc.create({ maxPercentage, minPercentage, text, resultImage, filePath });
+        const response = await friendsCalc.create({ maxPercentage, minPercentage, text, resultImage });
         res.send(response);
     } catch (error) {
         res.status(500).send({ error: error.message });
@@ -224,8 +209,8 @@ router.delete("/loveCalc/delete/:id", async (req, res) => {
 
 });
 
-router.put("/friendCalc/update", upload.single('image'), async (req, res) => {
-    let { maxPercentage, minPercentage, text, id, resultImage, filePath } = req.body;
+router.put("/friendCalc/update", uploadFile.single('image'), async (req, res) => {
+    let { maxPercentage, minPercentage, text, id, resultImage } = req.body;
 
     if (!maxPercentage || !minPercentage) {
         res.status(400).json({ errors: "min and max percentage value are required" })
@@ -236,22 +221,19 @@ router.put("/friendCalc/update", upload.single('image'), async (req, res) => {
     }
 
     if (req.file) {
-
-        await deleteImage(path.join(__dirname, `../${filePath}`))
-        resultImage = `${req.protocol}://${req.get('host')}/${req.file.filename}`
-        filePath = req.file.path;
+        resultImage = await uploadAndGetFirebaseUrl(req)
     }
 
     try {
-        const response = await friendsCalc.findByIdAndUpdate(id, { $set: { maxPercentage, minPercentage, text, resultImage, filePath } });
+        const response = await friendsCalc.findByIdAndUpdate(id, { $set: { maxPercentage, minPercentage, text, resultImage } });
         res.send(response);
     } catch (error) {
         res.status(500).send({ error: error.message });
     }
 });
 
-router.put("/loveCalc/update", upload.single('image'), async (req, res) => {
-    let { maxPercentage, minPercentage, text, id, image, filePath } = req.body;
+router.put("/loveCalc/update", uploadFile.single('image'), async (req, res) => {
+    let { maxPercentage, minPercentage, text, id, image } = req.body;
 
     if (!maxPercentage || !minPercentage) {
         res.status(400).json({ errors: "min and max percentage value are required" })
@@ -264,14 +246,11 @@ router.put("/loveCalc/update", upload.single('image'), async (req, res) => {
     let resultImage = image;
 
     if (req.file) {
-
-        await deleteImage(path.join(__dirname, `../${filePath}`))
-        resultImage = `${req.protocol}://${req.get('host')}/${req.file.filename}`
-        filePath = req.file.path;
+        resultImage = await uploadAndGetFirebaseUrl(req)
     }
 
     try {
-        const response = await loveCalc.findByIdAndUpdate(id, { $set: { maxPercentage, minPercentage, text, resultImage, filePath } });
+        const response = await loveCalc.findByIdAndUpdate(id, { $set: { maxPercentage, minPercentage, text, resultImage } });
         res.send(response);
     } catch (error) {
         res.status(500).send({ error: error.message });

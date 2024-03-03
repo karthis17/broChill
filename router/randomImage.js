@@ -1,25 +1,9 @@
 const RandImg = require('../model/randomImage.model');
 const router = require('express').Router();
 const auth = require('../middelware/auth');
-const multer = require('multer');
-const path = require('path');
-const deleteImage = require('../commonFunc/delete.image');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
-
-
-
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + file.originalname + new Date().getMilliseconds() + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
-
-
-
-router.post("/upload-frame", upload.single('frame'), async (req, res) => {
+router.post("/upload-frame", uploadFile.single('frame'), async (req, res) => {
 
 
     const { frameName } = req.body;
@@ -28,12 +12,10 @@ router.post("/upload-frame", upload.single('frame'), async (req, res) => {
         res.status(404).send({ menubar: 'frame is not found' });
     }
 
-    let frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-
-    const framePath = req.file.path;
+    const fileUrl = await uploadAndGetFirebaseUrl(req)
 
     try {
-        const frame = await RandImg.create({ framePath, frameUrl, frameName });
+        const frame = await RandImg.create({ fileUrl, frameName });
         res.send(frame);
     } catch (error) {
         console.error(error);
@@ -142,12 +124,8 @@ router.delete('/delete/:id', async (req, res) => {
 
         const ress = await RandImg.findById(req.params.id)
 
-        if (deleteImage(path.join(__dirname, `../${ress.framePath}`))) {
-
-            await RandImg.deleteOne({ _id: req.params.id });
-        } else {
-            res.status(404).send({ error: 'err while deleting image' });
-        }
+        if(!!ress)
+        await RandImg.deleteOne({ _id: req.params.id });
         res.send({ message: "deleted successfully" });
     } catch (error) {
         res.status(500).send({ message: "internal error: " + error.message })
@@ -155,24 +133,24 @@ router.delete('/delete/:id', async (req, res) => {
 });
 
 
-router.put('/update', upload.single('frame'), async (req, res) => {
+router.put('/update', uploadFile.single('frame'), async (req, res) => {
 
-    let { frameName, framePath, frameUrl, id } = req.body;
+    let { frameName, frameUrl, id } = req.body;
 
 
     if (req.file) {
-        deleteImage(path.join(__dirname, `../${framePath}`));
-        frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-        framePath = req.file.path;
+        frameUrl = await uploadAndGetFirebaseUrl(req);
     }
 
     try {
-        const updatedFrame = await RandImg.findByIdAndUpdate(id, { $set: { frameUrl, framePath, frameName } });
+        const updatedFrame = await RandImg.findByIdAndUpdate(id, { $set: { frameUrl, frameName } });
         res.send({ success: true, message: "updated successfully" });
     } catch (error) {
         res.status(500).send({ error: error.message });
     }
 
 })
+
+
 
 module.exports = router;
