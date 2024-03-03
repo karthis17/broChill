@@ -43,7 +43,7 @@ const uploadAndGetFirebaseUrl = async (req) => {
         const file = bucket.file(imageName);
         await file.save(imageBuffer, { contentType: 'image/jpeg' });
         const [url] = await file.getSignedUrl({ action: 'read', expires: '03-01-2500' });
-        console.log('Image uploaded to firebase successfully. URL:', url);
+        console.log('Image uploaded to firebase successfully. Name:', req.file.originalname);
         return url;
     }
 

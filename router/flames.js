@@ -1,31 +1,18 @@
 const Flames = require('../model/flames.model');
 const router = require('express').Router();
 const auth = require('../middelware/auth');
-const multer = require('multer');
-const path = require('path');
-const deleteImage = require('../commonFunc/delete.image');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
 
-const upload = multer({ storage: storage });
-
-
-router.post('/add-image', upload.single('image'), async (req, res) => {
+router.post('/add-image', uploadFile.single('image'), async (req, res) => {
     if (!req.file) {
         return res.status(404).send({ message: "No file found" });
     }
-    let imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-    let imagePath = req.file.path;
-
+    let imageUrl = await uploadAndGetFirebaseUrl(req);
 
     try {
-        const result = await Flames.create({ imageUrl, flamesWord: req.body.word, imagePath });
+        const result = await Flames.create({ imageUrl, flamesWord: req.body.word });
         res.send(result)
     } catch (error) {
         res.status(500).send({ message: "Error creating image", error: error.message });
@@ -69,23 +56,17 @@ router.delete("/delete/:id", async (req, res) => {
     }
 });
 
-router.put("/update", upload.single('image'), async (req, res) => {
+router.put("/update", uploadFile.single('image'), async (req, res) => {
 
     let imageUrl = req.body.image;
-    let imagePath = req.body.imagePath;
 
     if (req.file) {
-        if (deleteImage(path.join(__dirname, `../${imagePath}`))) {
-
-            imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`
-        }
-
-        imagePath = req.file.path;
+            imageUrl = await uploadAndGetFirebaseUrl(req)
     }
 
 
     try {
-        const result = await Flames.findByIdAndUpdate(req.body.id, { imageUrl, flamesWord: req.body.word, imagePath });
+        const result = await Flames.findByIdAndUpdate(req.body.id, { imageUrl, flamesWord: req.body.word });
         res.send(result)
     } catch (error) {
         res.status(500).send({ message: "Error creating image", error: error.message });

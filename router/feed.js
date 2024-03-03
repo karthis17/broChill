@@ -1,27 +1,15 @@
 const feeds = require('../model/feed.model');
 const router = require('express').Router();
-const multer = require('multer');
-const path = require('path');
 const auth = require('../middelware/auth');
-const deleteImage = require('../commonFunc/delete.image');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
-
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
-
-router.post('/upload-feed', auth, upload.single('feed'), async (req, res) => {
+router.post('/upload-feed', auth, uploadFile.single('feed'), async (req, res) => {
     console.log(req.body)
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
-
+        const fileUrl = await uploadAndGetFirebaseUrl(req)
         console.log(req.file)
 
         let { description, category, title, titleDifLang, descriptionDifLang } = req.body;
@@ -41,9 +29,9 @@ router.post('/upload-feed', auth, upload.single('feed'), async (req, res) => {
         }
 
 
-        const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-        const imagePath = req.file.path;
-        const feed = await feeds.create({ category, title, imagePath, imageUrl, description, user: req.user.id, titleDifLang, descriptionDifLang });
+        // const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+        // const imagePath = req.file.path;
+        const feed = await feeds.create({ category, title, imageUrl: fileUrl, description, user: req.user.id, titleDifLang, descriptionDifLang });
         console.log(feed);
 
         res.status(201).json(feed);
@@ -93,6 +81,8 @@ router.get('/category/:id', async (req, res) => {
 });
 
 
+
+
 router.get("/get-all", async (req, res) => {
     const lang = req.query.lang;
     try {
@@ -102,23 +92,22 @@ router.get("/get-all", async (req, res) => {
             let result = await feed.map(feed => {
                 const title = feed.titleDifLang.find(tit => tit.lang === lang);
                 const description = feed.descriptionDifLang.find(dis => dis.lang === lang);
-
                 // If title or description is found in the specified language, use its text, otherwise fallback to default
                 feed.title = title ? title.text : feed.title;
                 feed.description = description ? description.text : feed.title;
-
                 return feed;
             });
-
             res.json(result);
         } else {
-
             res.json(feed);
         }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
+
+
+
 
 router.post('/like', auth, async (req, res) => {
     try {
@@ -147,12 +136,9 @@ router.post('/like', auth, async (req, res) => {
 });
 
 
-
-
 router.post('/share', async (req, res) => {
     try {
         const response = await feeds.findByIdAndUpdate(req.body.feedId, { $inc: { shares: 1 } })
-
         res.json(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
@@ -182,15 +168,9 @@ router.delete('/delete/:id', auth, async (req, res) => {
 
     try {
         const feed = await feeds.findById(req.params.id);
-        let image = path.join(__dirname, `../${await feed.imagePath}`);
 
-        if (deleteImage(image)) {
             await feeds.deleteOne({ _id: await feed._id });
             res.status(200).json({ message: "record deleted successfully" });
-        }
-        else {
-            res.status(400).json({ message: "error while delete file" });
-        }
 
     }
     catch (error) {
@@ -200,15 +180,13 @@ router.delete('/delete/:id', auth, async (req, res) => {
 
 });
 
-router.put("/update", auth, upload.single("new_feed"), async (req, res) => {
+router.put("/update", auth, uploadFile.single("new_feed"), async (req, res) => {
 
     console.log(req.body)
-    let { description, category, title, id, imageUrl, imagePath } = req.body;
+    let { description, category, title, id, imageUrl } = req.body;
     try {
         if (req.file) {
-            await deleteImage(path.join(__dirname, `../${imagePath}`))
-            imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-            imagePath = req.file.path;
+            imageUrl = await uploadAndGetFirebaseUrl(req)
         }
 
         console.log(req.file)
@@ -218,7 +196,7 @@ router.put("/update", auth, upload.single("new_feed"), async (req, res) => {
             return res.status(400).json({ message: 'Description is required' });
         }
 
-        const feed = await feeds.findByIdAndUpdate(id, { $set: { category, title, imagePath, imageUrl, description } });
+        const feed = await feeds.findByIdAndUpdate(id, { $set: { category, title, imageUrl, description } });
         console.log(feed);
 
         res.status(201).json(feed);
