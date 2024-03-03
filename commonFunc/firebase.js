@@ -17,21 +17,13 @@ const storage = multer.memoryStorage({
     }
 });
 
-const diskStorage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
 const uploadFile = multer({ storage: storage });
-const uploadFileByDiskStorage = multer({ storage: diskStorage })
 const bucket = admin.storage().bucket("gs://witalks-e7c25.appspot.com");
 
 
 const uploadAndGetFirebaseUrl = async (req) => {
-
-    const imageBuffer = req.file ? req.file.buffer : undefined;
+    const fileData = req?.file || req || undefined
+    const imageBuffer = fileData?.buffer;
 
     if (!imageBuffer) {
         console.error('Image buffer is undefined.');
@@ -39,11 +31,11 @@ const uploadAndGetFirebaseUrl = async (req) => {
     }
 
     else {
-        const imageName = req.file.originalname;
+        const imageName = fileData.originalname;
         const file = bucket.file(imageName);
         await file.save(imageBuffer, { contentType: 'image/jpeg' });
         const [url] = await file.getSignedUrl({ action: 'read', expires: '03-01-2500' });
-        console.log('Image uploaded to firebase successfully. Name:', req.file.originalname);
+        console.log('Image uploaded to firebase successfully. Name:', fileData.originalname);
         return url;
     }
 
@@ -51,6 +43,5 @@ const uploadAndGetFirebaseUrl = async (req) => {
 
 module.exports = {
     uploadFile,
-    uploadFileByDiskStorage,
     uploadAndGetFirebaseUrl,
 }

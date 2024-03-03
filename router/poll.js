@@ -1,9 +1,7 @@
 const router = require('express').Router();
-const multer = require('multer');
-const path = require('path');
 const Poll = require('../model/poll.model');
 const auth = require('../middelware/auth');
-
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 async function getVotesForOptions(pollId) {
     try {
@@ -34,18 +32,6 @@ async function getVotesForOptions(pollId) {
         throw error;
     }
 }
-
-
-
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
-
 
 router.get('/get-poll/:id', async (req, res) => {
 
@@ -131,7 +117,9 @@ router.post('/vote', auth, async (req, res) => {
 
 });
 
-router.post('/add-text-poll', upload.single('question'), async (req, res) => {
+
+
+router.post('/add-text-poll', uploadFile.single('question'), async (req, res) => {
     let { question, options, questionDifLang } = req.body;
     console.log(req.body, req.file)
 
@@ -139,10 +127,9 @@ router.post('/add-text-poll', upload.single('question'), async (req, res) => {
 
     if (questionDifLang) {
         questionDifLang = JSON.parse(questionDifLang);
-
     }
     if (req.file) {
-        qn = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+        qn = await uploadAndGetFirebaseUrl(req);
     } else {
         qn = question;
     }
@@ -161,7 +148,9 @@ router.post('/add-text-poll', upload.single('question'), async (req, res) => {
 
 });
 
-const cpUpload = upload.fields([{ name: 'question', maxCount: 1 }, { name: 'options', maxCount: 10 }]);
+
+
+const cpUpload = uploadFile.fields([{ name: 'question', maxCount: 1 }, { name: 'options', maxCount: 10 }]);
 
 router.post('/add-img-poll', cpUpload, async (req, res) => {
     const { question, questionDifLang } = req.body;
@@ -170,21 +159,18 @@ router.post('/add-img-poll', cpUpload, async (req, res) => {
         questionDifLang = JSON.parse(questionDifLang);
     }
 
-    const optionsArray = []
+    const promiseImgs = []
     req.files['options'].forEach((option) => {
         console.log(option);
-        const imageUrl = `${req.protocol}://${req.get('host')}/${option.filename}`;
-        optionsArray.push(imageUrl);
+        promiseImgs.push(uploadAndGetFirebaseUrl(option));
     });
+    const optionsArray = await Promise.all(promiseImgs);
 
-    let qn;
+    let qn = "";
 
     if (req.files['question']) {
-        req.files['question'].forEach((question) => {
-
-            qn = `${req.protocol}://${req.get('host')}/${question.filename}`;
-
-        })
+        const qs = req.files['question'][0]
+        qn = await uploadAndGetFirebaseUrl(qs);
     } else {
         qn = question;
     }
@@ -270,14 +256,14 @@ router.delete('/delete/:pollId', async (req, res) => {
 
 });
 
-router.put('/update', upload.single('question'), async (req, res) => {
+router.put('/update', uploadFile.single('question'), async (req, res) => {
     const { question, options, id } = req.body;
     console.log(req.body, req.file)
 
     let qn;
 
     if (req.file) {
-        qn = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+        qn = await uploadAndGetFirebaseUrl(req);
     } else {
         qn = question;
     }
