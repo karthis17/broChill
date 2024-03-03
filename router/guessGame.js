@@ -1,22 +1,11 @@
 const auth = require('../middelware/auth');
-const multer = require('multer');
 const router = require('express').Router();
 const path = require('path');
 const guess = require('../model/guessGame.model');
 const deleteImage = require('../commonFunc/delete.image');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
-
-
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + file.originalname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
-
-const cpUpload = upload.fields([
+const cpUpload = uploadFile.fields([
     { name: 'question', maxCount: 1 },
     { name: 'options', maxCount: 10 },
 ]);
@@ -34,11 +23,9 @@ router.post('/upload', cpUpload, async (req, res) => {
     }
 
     let question;
-    let imagePath;
     if (req.files['question']) {
-
-        question = `${req.protocol}://${req.get('host')}/${req.files['question'][0].filename}`
-        imagePath = req.files['question'][0].path;
+        const qs = req.files['question'][0]
+        question = await uploadAndGetFirebaseUrl(qs);
     } else {
         console.log(req.body)
         question = req.body.question;
@@ -51,24 +38,27 @@ router.post('/upload', cpUpload, async (req, res) => {
 
     let options = [];
     let answer;
+    const promiseImgs = []
+
     if (req.files['options']) {
 
         req.files['options'].forEach(element => {
             if (element.originalname === correctOption) {
                 answer = element;
                 options.push({
-                    option: `${req.protocol}://${req.get('host')}/${element.filename}`,
                     answer: true,
-                    imagePath: element.path
                 });
             } else {
                 options.push({
-                    option: `${req.protocol}://${req.get('host')}/${element.filename}`,
                     answer: false,
-                    imagePath: element.path
                 });
             }
+            promiseImgs.push(uploadAndGetFirebaseUrl(element));
         });
+        const optionsImgUrls = await Promise.all(promiseImgs);
+        options.forEach((op, index) => {
+            op.option = optionsImgUrls[index]
+        })
     } else {
         req.body.options.forEach(item => {
             if (item === correctOption) {
@@ -91,7 +81,7 @@ router.post('/upload', cpUpload, async (req, res) => {
     }
 
     try {
-        const result = await guess.create({ question, options, questionType, optionsType, imagePath, questionDifLang });
+        const result = await guess.create({ question, options, questionType, optionsType, questionDifLang });
         res.json(result);
     } catch (error) {
         res.status(500).json(error);

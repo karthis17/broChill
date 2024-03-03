@@ -17,15 +17,7 @@ const storage = multer.memoryStorage({
     }
 });
 
-const diskStorage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
 const uploadFile = multer({ storage: storage });
-const uploadFileByDiskStorage = multer({ storage: diskStorage })
 const bucket = admin.storage().bucket("gs://witalks-e7c25.appspot.com");
 
 
@@ -51,6 +43,5 @@ const uploadAndGetFirebaseUrl = async (req) => {
 
 module.exports = {
     uploadFile,
-    uploadFileByDiskStorage,
     uploadAndGetFirebaseUrl,
 }
