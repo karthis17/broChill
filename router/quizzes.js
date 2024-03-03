@@ -1,21 +1,11 @@
 const router = require('express').Router();
-const multer = require('multer');
-const path = require('path');
 const Quizzes = require('../model/quizzes.model');
 const auth = require('../middelware/auth');
-const deleteImage = require('../commonFunc/delete.image');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + file.originalname + Math.random() * 9090982 + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
 
-const upload = multer({ storage: storage });
-
-const cpUpload = upload.fields([
+const cpUpload = uploadFile.fields([
     { name: 'question', maxCount: 1 },
     { name: 'state1', maxCount: 5 },
     { name: 'state2', maxCount: 5 },
@@ -24,12 +14,13 @@ const cpUpload = upload.fields([
 ]);
 
 router.post('/upload', cpUpload, (req, res) => {
-
+    
     res.json(req.files)
 
 });
 
 router.post('/add-quizze', async (req, res) => {
+    const bodyData = req.body;
 
     let statement_1 = [];
     let statement_2 = [];
@@ -37,40 +28,49 @@ router.post('/add-quizze', async (req, res) => {
     let results = [];
 
 
-    const question = `${req.protocol}://${req.get('host')}/${req.body.question.filename}`;
-    const questionPath = req.body.question.path;
+    const question = await uploadAndGetFirebaseUrl(bodyData.question);
+    let promiseImgs1 = []
+    let promiseImgs2 = []
+    let promiseImgs3 = []
+    let promiseImgsResult = []
 
-    for (let i = 0; i < req.body.state1.length; i++) {
+
+
+    for (let i = 0; i < bodyData.state1.length; i++) {
         statement_1.push({
-            option: `${req.protocol}://${req.get('host')}/${req.body.state1[i].option.filename}`,
-            point: req.body.state1[i].point,
-            imagePath: req.body.state1[i].option.path
+            point: bodyData.state1[i].point,
         });
+        promiseImgs1.push(uploadAndGetFirebaseUrl(bodyData.state1[i].option))
         statement_2.push({
-            option: `${req.protocol}://${req.get('host')}/${req.body.state2[i].option.filename}`,
-            point: req.body.state2[i].point,
-            imagePath: req.body.state2[i].option.path
-
+            point: bodyData.state2[i].point,
         });
+        promiseImgs2.push(uploadAndGetFirebaseUrl(bodyData.state2[i].option))
         statement_3.push({
-            option: `${req.protocol}://${req.get('host')}/${req.body.state3[i].option.filename}`,
-            point: req.body.state3[i].point,
-            imagePath: req.body.state3[i].option.path
-
+            point: bodyData.state3[i].point,
         });
+        promiseImgs3.push(uploadAndGetFirebaseUrl(bodyData.state3[i].option))
         results.push({
-            scoreBoard: `${req.protocol}://${req.get('host')}/${req.body.result[i].resultImg.filename}`,
-            minScore: req.body.result[i].minScore,
-            maxScore: req.body.result[i].maxScore,
-            imagePath: req.body.result[i].resultImg.path
+            minScore: bodyData.result[i].minScore,
+            maxScore: bodyData.result[i].maxScore,
         });
+        promiseImgsResult.push(uploadAndGetFirebaseUrl(bodyData.result[i].resultImg))
 
+    }
+    promiseImgs1 = await Promise.all(promiseImgs1);
+    promiseImgs2 = await Promise.all(promiseImgs2);
+    promiseImgs3 = await Promise.all(promiseImgs3);
+    promiseImgsResult = await Promise.all(promiseImgsResult);
+    for (let i = 0; i < bodyData.state1.length; i++) {
+        statement_1[i].option = promiseImgs1[i]
+        statement_2[i].option = promiseImgs2[i]
+        statement_3[i].option = promiseImgs3[i]
+        results[i].scoreBoard = promiseImgsResult[i]
     }
 
     console.log(statement_1, statement_2, statement_3, results);
 
     try {
-        const response = await Quizzes.create({ questionImage: question, statement_1, statement_2, statement_3, results, questionPath });
+        const response = await Quizzes.create({ questionImage: question, statement_1, statement_2, statement_3, results });
         res.json(response);
     } catch (error) {
         console.error(error);
@@ -123,18 +123,6 @@ router.post('/get-result', auth, async (req, res) => {
 router.delete("/delete/:id", auth, async (req, res) => {
 
     try {
-
-        const ress = await Quizzes.findById(req.params.id);
-
-        deleteImage(path.join(__dirname, `../${ress.questionPath}`));
-
-        for (let i = 0; i < req.body.state1.length; i++) {
-            deleteImage(path.join(__dirname, `../${ress.statement_1[i].imagePath}`))
-            deleteImage(path.join(__dirname, `../${ress.statement_2[i].imagePath}`))
-            deleteImage(path.join(__dirname, `../${ress.statement_3[i].imagePath}`))
-            deleteImage(path.join(__dirname, `../${ress.results[i].imagePath}`))
-        }
-
         await Quizzes.deleteOne({ _id: req.params.id });
         res.status(200).json({ message: "Deleted successfully", success: true });
     } catch (error) {
