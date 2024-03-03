@@ -3,7 +3,6 @@ const { default: mongoose } = require("mongoose");
 module.exports = mongoose.model('flames', {
 
     imageUrl: { type: String, required: true },
-    imagePath: { type: String, required: true },
     flamesWord: { type: String, required: true },
 
     users: [{

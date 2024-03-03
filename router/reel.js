@@ -1,57 +1,34 @@
 const router = require('express').Router();
-const multer = require('multer');
-const path = require('path');
 const reels = require('../model/reels.model');
 const auth = require('../middelware/auth');
-const deleteImage = require('../commonFunc/delete.image');
-const { text } = require('body-parser');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
 
-const upload = multer({ storage: storage });
-
-router.post('/upload-reel', auth, upload.single('reel'), async (req, res) => {
+router.post('/upload-reel', auth, uploadFile.single('reel'), async (req, res) => {
 
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
-
-        console.log(req.file)
-
+        const fileUrl = await uploadAndGetFirebaseUrl(req)
         let { category, hashtags, titleDifLang, descriptionDifLang, title, description } = req.body;
-
         titleDifLang = JSON.parse(titleDifLang);
         descriptionDifLang = JSON.parse(descriptionDifLang);
-
         console.log(titleDifLang, descriptionDifLang)
-
 
         if (!Array.isArray(hashtags)) {
             return res.status(404).json({ message: 'hashtags must be an array' });
         }
 
-
         if (!description) {
             return res.status(400).json({ message: 'Description is required' });
         }
-
-        const fileUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-        const filePath = req.file.path;
-        const reel = await reels.create({ category, titleDifLang, fileUrl, filePath, descriptionDifLang, user: req.user.id, hashtags, title, description });
-        console.log(reel);
-
-        res.status(201).json(reel);
+        const reel = await reels.create({ category, titleDifLang, fileUrl, descriptionDifLang, user: req.user.id, hashtags, title, description });
+        return res.status(201).json(reel);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error( error);
+        return res.status(500).json({ message: 'Internal server error:' + error });
     }
-
 });
 
 
@@ -132,7 +109,6 @@ router.get("/get-all", async (req, res) => {
     }
 });
 
-
 router.post('/like', auth, async (req, res) => {
     try {
         const reelId = req.body.reelId;
@@ -185,40 +161,30 @@ router.post('/add-comment', auth, async (req, res) => {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
     }
+
 });
 
 router.delete('/delete/:reelId', auth, async (req, res) => {
 
-
     try {
         const reel = await reels.findById(req.params.reelId);
-        let image = path.join(__dirname, `../${await reel.filePath}`);
-
-        if (deleteImage(image)) {
-            await reels.deleteOne({ _id: await reel._id });
-            res.status(200).json({ message: "record deleted successfully" });
-        }
-        else {
-            res.status(400).json({ message: "error while delete file" });
-        }
-
+        await reels.deleteOne({ _id: await reel._id });
+        return res.status(200).json({ message: "record deleted successfully" });
     }
     catch (error) {
-        res.status(500).json({ message: error.message, success: false });
+        return res.status(500).json({ message: error.message, success: false });
 
     }
 
 });
 
-router.put("/update", auth, upload.single("new_reel"), async (req, res) => {
+router.put("/update", auth, uploadFile.single("new_reel"), async (req, res) => {
 
     console.log(req.body)
-    let { description, category, hashtags, title, id, fileUrl, filePath } = req.body;
+    let { description, category, hashtags, title, id, fileUrl } = req.body;
     try {
         if (req.file) {
-            await deleteImage(path.join(__dirname, `../${filePath}`))
-            fileUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-            filePath = req.file.path;
+            fileUrl = await uploadAndGetFirebaseUrl(req);
         }
 
         console.log(req.file)
@@ -228,18 +194,17 @@ router.put("/update", auth, upload.single("new_reel"), async (req, res) => {
             return res.status(404).json({ message: 'hashtags must be an array' });
         }
 
-
         if (!description) {
             return res.status(400).json({ message: 'Description is required' });
         }
 
-        const reel = await reels.findByIdAndUpdate(id, { $set: { category, title, filePath, fileUrl, description, hashtags } });
+        const reel = await reels.findByIdAndUpdate(id, { $set: { category, title, fileUrl, description, hashtags } });
         console.log(reel);
 
-        res.status(201).json(reel);
+        return res.status(201).json(reel);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        return res.status(500).json({ message: 'Internal server error' });
     }
 
 });
