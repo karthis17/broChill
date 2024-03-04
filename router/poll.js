@@ -22,7 +22,7 @@ async function getVotesForOptions(pollId) {
 
         const percentagesByOption = [];
         for (const option in votesByOption) {
-            percentagesByOption.push({ option, percentage: (votesByOption[option] / totalVotes) * 100 })
+            percentagesByOption.push({ option: +option, percentage: (votesByOption[option] / totalVotes) * 100 })
 
         }
 
@@ -37,7 +37,10 @@ router.get('/get-poll/:id', async (req, res) => {
 
     try {
         const poll = await Poll.findById(req.params.id);
-        const votes = await getVotesForOptions(req.params.id)
+        let votes = await getVotesForOptions(req.params.id)
+
+        votes.map(vote => { })
+
         const lang = req.query.lang;
 
         if (lang) {
@@ -57,9 +60,6 @@ router.get('/get-poll/:id', async (req, res) => {
             });
         }
 
-        res.send({
-            poll, votes
-        });
     } catch (error) {
 
         res.json({ error: error.message });
@@ -76,8 +76,10 @@ router.get('/getAll', async (req, res) => {
         if (lang) {
             let result = await poll.map(p => {
                 const question = p.questionDifLang.find(tit => tit.lang === lang);
+                const answer = p.optionDifLang.find(tit => tit.lang === lang);
 
                 p.question = question ? question.text : p.question;
+                p.option = answer ? answer.data : p.option;
                 return p;
             });
 
@@ -95,12 +97,12 @@ router.get('/getAll', async (req, res) => {
 
 
 
-router.post('/vote', auth, async (req, res) => {
+router.post('/vote', async (req, res) => {
 
     try {
         const poll = await Poll.findOneAndUpdate(
             { _id: req.body.pollId },
-            { $push: { votes: { votedOption: req.body.option, user: req.user.id } } },
+            { $push: { votes: { votedOption: req.body.option } } },
             { new: true }
         );
 
@@ -120,7 +122,7 @@ router.post('/vote', auth, async (req, res) => {
 
 
 router.post('/add-text-poll', uploadFile.single('question'), async (req, res) => {
-    let { question, options, questionDifLang } = req.body;
+    let { question, questionDifLang, optionDifLang } = req.body;
     console.log(req.body, req.file)
 
     let qn;
@@ -128,16 +130,18 @@ router.post('/add-text-poll', uploadFile.single('question'), async (req, res) =>
     if (questionDifLang) {
         questionDifLang = JSON.parse(questionDifLang);
     }
+    if (optionDifLang) {
+        optionDifLang = JSON.parse(optionDifLang);
+    }
     if (req.file) {
         qn = await uploadAndGetFirebaseUrl(req);
     } else {
         qn = question;
     }
 
-    const optionsArray = Array.isArray(options) ? options : [options];
 
     try {
-        const poll = await Poll.create({ question: qn, option: optionsArray, questionDifLang });
+        const poll = await Poll.create({ question: qn, option: [], questionDifLang, optionDifLang });
 
         res.status(201).json({ message: 'Poll created successfully', poll });
     } catch (error) {
@@ -154,6 +158,8 @@ const cpUpload = uploadFile.fields([{ name: 'question', maxCount: 1 }, { name: '
 
 router.post('/add-img-poll', cpUpload, async (req, res) => {
     const { question, questionDifLang } = req.body;
+
+    console.log(questionDifLang);
 
     if (questionDifLang) {
         questionDifLang = JSON.parse(questionDifLang);

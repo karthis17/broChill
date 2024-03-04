@@ -14,14 +14,17 @@ router.post('/upload', cpUpload, async (req, res) => {
 
     // res.json(req.files)
 
-    let { correctOption, questionType, optionsType, questionDifLang } = req.body;
+    let { correctOption, questionType, optionsType, questionDifLang, optionDifLang } = req.body;
 
 
     if (questionDifLang) {
 
         questionDifLang = JSON.parse(questionDifLang);
     }
+    if (optionDifLang) {
 
+        optionDifLang = JSON.parse(optionDifLang);
+    }
     let question;
     if (req.files['question']) {
         const qs = req.files['question'][0]
@@ -37,51 +40,21 @@ router.post('/upload', cpUpload, async (req, res) => {
 
 
     let options = [];
-    let answer;
     const promiseImgs = []
 
     if (req.files['options']) {
 
-        req.files['options'].forEach(element => {
-            if (element.originalname === correctOption) {
-                answer = element;
-                options.push({
-                    answer: true,
-                });
-            } else {
-                options.push({
-                    answer: false,
-                });
-            }
+        req.files['options'].forEach((element, i) => {
             promiseImgs.push(uploadAndGetFirebaseUrl(element));
         });
-        const optionsImgUrls = await Promise.all(promiseImgs);
-        options.forEach((op, index) => {
-            op.option = optionsImgUrls[index]
-        })
-    } else {
-        req.body.options.forEach(item => {
-            if (item === correctOption) {
-                answer = item;
-                options.push({
-                    option: item,
-                    answer: true,
-                });
-            } else {
-                options.push({
-                    option: item,
-                    answer: false
-                });
-            }
-        })
+        options = await Promise.all(promiseImgs);
+
     }
 
-    if (!answer) {
-        return res.status(404).send({ err: "awser is requried" });
-    }
+
 
     try {
-        const result = await guess.create({ question, options, questionType, optionsType, questionDifLang });
+        const result = await guess.create({ question, options, questionType, optionsType, questionDifLang, optionDifLang, answer: correctOption });
         res.json(result);
     } catch (error) {
         res.status(500).json(error);
@@ -96,12 +69,16 @@ router.get('/get-all', async (req, res) => {
 
     try {
         const questions = await guess.find();
-        if (lang) {
-            let result = await questions.map(p => {
+        if (lang && lang.toLowerCase() !== "english") {
+            let result = await questions.filter(p => {
                 const question = p.questionDifLang.find(tit => tit.lang === lang);
 
-                p.question = question ? question.text : p.question;
-                return p;
+                if (question) {
+                    p.question = question.text;
+                    return p;
+                } else {
+                    return false;
+                }
             });
 
             res.json(result);

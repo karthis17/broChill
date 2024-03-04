@@ -119,12 +119,17 @@ router.get('/get-all', async (req, res) => {
         const lang = req.query.lang;
 
         const result = await Percentage.find();
-        if (lang) {
-            let ress = await result.map(p => {
+        if (lang && lang.toLowerCase() !== "english") {
+            let ress = await result.filter(p => {
                 const question = p.questionDifLang.find(tit => tit.lang === lang);
 
-                p.question = question ? question.text : p.question;
-                return p;
+                if (question) {
+
+                    p.question = question.text;
+                    return p;
+                } else {
+                    return false;
+                }
             });
 
             res.json(ress);

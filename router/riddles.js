@@ -30,17 +30,23 @@ router.get('/get-all', async (req, res) => {
 
     try {
         const ridles = await riddles.find();
-        if (lang) {
+        if (lang && lang.toLowerCase() !== "english") {
 
-            const result = ridles.map(ridle => {
+            const result = ridles.filter(ridle => {
 
                 const question = ridle.questionDifLang.find(tit => tit.lang === lang);
                 const answer = ridle.answerDifLang.find(dis => dis.lang === lang);
 
-                ridle.question = question ? question.text : ridle.question;
-                ridle.answer = answer ? answer.text : ridle.answer;
+                if (question && answer) {
+                    ridle.question = question.text
+                    ridle.answer = answer.text
 
-                return ridle;
+                    return ridle;
+                }
+                else {
+                    return false;
+                }
+
             })
 
 

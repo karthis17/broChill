@@ -44,7 +44,7 @@ router.post('/upload-feed', auth, uploadFile.single('feed'), async (req, res) =>
 
 
 
-router.get('/get-feel/:id', async (req, res) => {
+router.get('/get-feed/:id', async (req, res) => {
 
     const lang = req.query.lang;
 
@@ -130,14 +130,19 @@ router.get("/get-all", async (req, res) => {
     try {
         const feed = await feeds.find();
 
-        if (lang) {
-            let result = await feed.map(feed => {
+        if (lang && lang.toLowerCase() !== "english") {
+            let result = await feed.filter(feed => {
                 const title = feed.titleDifLang.find(tit => tit.lang === lang);
                 const description = feed.descriptionDifLang.find(dis => dis.lang === lang);
                 // If title or description is found in the specified language, use its text, otherwise fallback to default
-                feed.title = title ? title.text : feed.title;
-                feed.description = description ? description.text : feed.title;
-                return feed;
+
+                if (title) {
+                    feed.title = title.text;
+                    feed.description = description.text;
+                    return feed;
+                } else {
+                    return false
+                }
             });
             res.json(result);
         } else {

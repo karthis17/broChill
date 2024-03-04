@@ -2,11 +2,12 @@ const mongoose = require("mongoose");
 
 module.exports = mongoose.model("poll", {
     question: { type: String, required: true },
-    option: [{ type: String, required: true }],
+    option: Array,
+    optionDifLang: Array,
     questionDifLang: Array,
     votes: [{
-        votedOption: String,
-        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        votedOption: Number,
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         createdAt: { type: Date, default: Date.now }
     }],
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

@@ -4,20 +4,16 @@ const Quizzes = require('../model/funQuizzes.model');
 
 router.post('/add-question', async (req, res) => {
 
-    let { question, options, questionDifLang } = req.body;
+    let { question, optionDifLang, answer, questionDifLang } = req.body;
 
 
     if (!question) {
         return res.status(404).json({ error: "question not found" });
     }
 
-    if (!Array.isArray(options)) {
-        return res.status(404).json({ error: "option must be array with contain option and answer object" });
-
-    }
 
     try {
-        const ress = await Quizzes.create({ question, options, questionDifLang });
+        const ress = await Quizzes.create({ question, optionDifLang, options: [], answer, questionDifLang });
 
         res.json(ress);
     } catch (error) {
@@ -35,12 +31,17 @@ router.get('/get-all', async (req, res) => {
 
     try {
         const questions = await Quizzes.find();
-        if (lang) {
-            let result = await questions.map(p => {
+        if (lang && lang.toLowerCase() !== "english") {
+            let result = await questions.filter(p => {
                 const question = p.questionDifLang.find(tit => tit.lang === lang);
 
-                p.question = question ? question.text : p.question;
-                return p;
+                if (question) {
+
+                    p.question = question.text;
+                    return p;
+                } else {
+                    return false;
+                }
             });
 
             res.json(result);

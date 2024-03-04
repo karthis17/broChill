@@ -110,10 +110,14 @@ router.get("/get-all", async (req, res) => {
                 const description = reel.descriptionDifLang.find(dis => dis.lang === lang);
 
                 // If title or description is found in the specified language, use its text, otherwise fallback to default
-                reel.title = title ? title.text : reel.title;
-                reel.description = description ? description.text : reel.title;
+                if (title) {
+                    reel.title = title.text;
+                    reel.description = description.text;
+                    return reel;
+                } else {
+                    return false;
+                }
 
-                return reel;
             });
 
             res.json(result);

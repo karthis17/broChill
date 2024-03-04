@@ -20,13 +20,18 @@ router.get('/get-frames', async (req, res) => {
     const lang = req.query.lang;
     try {
         const response = await Frames.find();
-        if (lang) {
-            let result = await response.map(frame => {
+        if (lang && lang.toLowerCase() !== "english") {
+            let result = await response.filter(frame => {
                 const title = frame.titleDifLang.find(tit => tit.lang === lang);
 
-                frame.frameName = title ? title.text : frame.frameName;
 
-                return frame;
+                if (title) {
+                    frame.frameName = title.text;
+
+                    return frame;
+                } else {
+                    return false;
+                }
             });
 
             res.json(result);
