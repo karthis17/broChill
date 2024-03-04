@@ -3,11 +3,12 @@ const router = require('express').Router();
 
 const pickAndKick = require('../model/pickOneKickOne.model');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const adminRole = require('../middelware/checkRole');
 
 
 
 
-router.post('/add-question', uploadFile.single('question'), async (req, res) => {
+router.post('/add-question', auth, adminRole, uploadFile.single('question'), async (req, res) => {
 
     let { option1, point1, option2, point2, option1DifLang, option2DifLang } = req.body;
     let question;
@@ -139,7 +140,7 @@ router.post('/play', async (req, res) => {
     }
 });
 
-router.delete("/delete/:id", auth, async function (req, res) {
+router.delete("/delete/:id", auth, adminRole, async function (req, res) {
 
     try {
 
@@ -153,7 +154,7 @@ router.delete("/delete/:id", auth, async function (req, res) {
 
 });
 
-router.put("/update", auth, uploadFile.single('question'), async (req, res) => {
+router.put("/update", auth, adminRole, uploadFile.single('question'), async (req, res) => {
     let { option1, point1, option2, point2, id } = req.body;
     let question;
 

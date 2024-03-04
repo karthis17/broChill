@@ -3,7 +3,9 @@ const router = require('express').Router();
 const auth = require('../middelware/auth');
 const multer = require('multer');
 const path = require('path');
-const Jimp = require('jimp')
+const Jimp = require('jimp');
+const adminRole = require('../middelware/checkRole');
+
 
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
@@ -16,7 +18,7 @@ const upload = multer({ storage: storage });
 
 
 
-router.post("/add-single-frame", upload.single('frame'), async (req, res) => {
+router.post("/add-single-frame", auth, adminRole, upload.single('frame'), async (req, res) => {
 
     console.log(req.body)
     let { question, frame_size, coordinates, questionDifLang } = req.body;
@@ -68,7 +70,7 @@ router.post("/add-single-frame", upload.single('frame'), async (req, res) => {
 
 
 const cpUpload = upload.fields([{ name: 'frame', maxCount: 2 }]);
-router.post("/add-frame", cpUpload, async (req, res) => {
+router.post("/add-frame", auth, adminRole, cpUpload, async (req, res) => {
     try {
         console.log(req.body);
         let { question, frames, questionDifLang } = req.body;
@@ -248,7 +250,7 @@ router.post('/add-comment', auth, async (req, res) => {
 });
 
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
     try {
 
 

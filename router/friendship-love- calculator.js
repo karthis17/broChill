@@ -1,9 +1,10 @@
 const auth = require('../middelware/auth');
 const router = require('express').Router();
+const adminRole = require('../middelware/checkRole');
 const { friendsCalc, loveCalc } = require('../model/friendNdLoveCalc.model');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
-router.post('/add-love-quotes', uploadFile.single('image'), async (req, res) => {
+router.post('/add-love-quotes', auth, adminRole, uploadFile.single('image'), async (req, res) => {
 
     const { maxPercentage, minPercentage, text } = req.body;
     console.log(req.file)
@@ -27,7 +28,7 @@ router.post('/add-love-quotes', uploadFile.single('image'), async (req, res) => 
 });
 
 
-router.post('/add-friend-quotes', uploadFile.single('image'), async (req, res) => {
+router.post('/add-friend-quotes', auth, adminRole, uploadFile.single('image'), async (req, res) => {
 
     const { maxPercentage, minPercentage, text } = req.body;
 
@@ -185,7 +186,7 @@ router.get('/loveCalc/get-all', async (req, res) => {
 
 });
 
-router.delete("/friendCalc/delete/:id", async (req, res) => {
+router.delete("/friendCalc/delete/:id", auth, adminRole, async (req, res) => {
 
     try {
         await friendsCalc.deleteOne({ _id: req.params.id });
@@ -197,7 +198,7 @@ router.delete("/friendCalc/delete/:id", async (req, res) => {
 
 });
 
-router.delete("/loveCalc/delete/:id", async (req, res) => {
+router.delete("/loveCalc/delete/:id", auth, adminRole, async (req, res) => {
 
     try {
         await loveCalc.deleteOne({ _id: req.params.id });
@@ -209,7 +210,7 @@ router.delete("/loveCalc/delete/:id", async (req, res) => {
 
 });
 
-router.put("/friendCalc/update", uploadFile.single('image'), async (req, res) => {
+router.put("/friendCalc/update", auth, adminRole, uploadFile.single('image'), async (req, res) => {
     let { maxPercentage, minPercentage, text, id, resultImage } = req.body;
 
     if (!maxPercentage || !minPercentage) {
@@ -232,7 +233,7 @@ router.put("/friendCalc/update", uploadFile.single('image'), async (req, res) =>
     }
 });
 
-router.put("/loveCalc/update", uploadFile.single('image'), async (req, res) => {
+router.put("/loveCalc/update", auth, adminRole, uploadFile.single('image'), async (req, res) => {
     let { maxPercentage, minPercentage, text, id, image } = req.body;
 
     if (!maxPercentage || !minPercentage) {

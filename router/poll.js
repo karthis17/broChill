@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const adminRole = require('../middelware/checkRole');
 const Poll = require('../model/poll.model');
 const auth = require('../middelware/auth');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
@@ -97,12 +98,12 @@ router.get('/getAll', async (req, res) => {
 
 
 
-router.post('/vote', async (req, res) => {
+router.post('/vote', auth, async (req, res) => {
 
     try {
         const poll = await Poll.findOneAndUpdate(
             { _id: req.body.pollId },
-            { $push: { votes: { votedOption: req.body.option } } },
+            { $push: { votes: { votedOption: req.body.option, user: req.user.id } } },
             { new: true }
         );
 
@@ -121,7 +122,7 @@ router.post('/vote', async (req, res) => {
 
 
 
-router.post('/add-text-poll', uploadFile.single('question'), async (req, res) => {
+router.post('/add-text-poll', auth, adminRole, uploadFile.single('question'), async (req, res) => {
     let { question, questionDifLang, optionDifLang } = req.body;
     console.log(req.body, req.file)
 
@@ -156,7 +157,7 @@ router.post('/add-text-poll', uploadFile.single('question'), async (req, res) =>
 
 const cpUpload = uploadFile.fields([{ name: 'question', maxCount: 1 }, { name: 'options', maxCount: 10 }]);
 
-router.post('/add-img-poll', cpUpload, async (req, res) => {
+router.post('/add-img-poll', auth, adminRole, cpUpload, async (req, res) => {
     const { question, questionDifLang } = req.body;
 
     console.log(questionDifLang);
@@ -251,7 +252,7 @@ router.post('/share', async (req, res) => {
     }
 });
 
-router.delete('/delete/:pollId', async (req, res) => {
+router.delete('/delete/:pollId', auth, adminRole, async (req, res) => {
 
     try {
         await Poll.deleteOne({ _id: req.params.pollId });
@@ -262,7 +263,7 @@ router.delete('/delete/:pollId', async (req, res) => {
 
 });
 
-router.put('/update', uploadFile.single('question'), async (req, res) => {
+router.put('/update', auth, adminRole, uploadFile.single('question'), async (req, res) => {
     const { question, options, id } = req.body;
     console.log(req.body, req.file)
 

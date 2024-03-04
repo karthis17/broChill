@@ -1,9 +1,10 @@
 const feeds = require('../model/feed.model');
 const router = require('express').Router();
 const auth = require('../middelware/auth');
+const adminRole = require('../middelware/checkRole');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
-router.post('/upload-feed', auth, uploadFile.single('feed'), async (req, res) => {
+router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (req, res) => {
     console.log(req.body)
     try {
         if (!req.file) {
@@ -210,7 +211,7 @@ router.post('/add-comment', auth, async (req, res) => {
 });
 
 
-router.delete('/delete/:id', auth, async (req, res) => {
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
 
     try {
@@ -227,7 +228,7 @@ router.delete('/delete/:id', auth, async (req, res) => {
 
 });
 
-router.put("/update", auth, uploadFile.single("new_feed"), async (req, res) => {
+router.put("/update", auth, adminRole, uploadFile.single("new_feed"), async (req, res) => {
 
     console.log(req.body)
     let { description, category, title, id, imageUrl } = req.body;

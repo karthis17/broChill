@@ -2,8 +2,9 @@ const RandImg = require('../model/randomImage.model');
 const router = require('express').Router();
 const auth = require('../middelware/auth');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const adminRole = require('../middelware/checkRole');
 
-router.post("/upload-frame", uploadFile.single('frame'), async (req, res) => {
+router.post("/upload-frame", auth, adminRole, uploadFile.single('frame'), async (req, res) => {
 
 
     const { frameName } = req.body;
@@ -119,13 +120,13 @@ router.post('/add-comment', auth, async (req, res) => {
 });
 
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
     try {
 
         const ress = await RandImg.findById(req.params.id)
 
-        if(!!ress)
-        await RandImg.deleteOne({ _id: req.params.id });
+        if (!!ress)
+            await RandImg.deleteOne({ _id: req.params.id });
         res.send({ message: "deleted successfully" });
     } catch (error) {
         res.status(500).send({ message: "internal error: " + error.message })
@@ -133,7 +134,7 @@ router.delete('/delete/:id', async (req, res) => {
 });
 
 
-router.put('/update', uploadFile.single('frame'), async (req, res) => {
+router.put('/update', auth, adminRole, uploadFile.single('frame'), async (req, res) => {
 
     let { frameName, frameUrl, id } = req.body;
 

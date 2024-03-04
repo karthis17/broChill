@@ -1,9 +1,10 @@
 const auth = require('../middelware/auth');
 const { nameFact, nameMeaning } = require('../model/nameMeaning.model');
 const router = require('express').Router();
+const adminRole = require('../middelware/checkRole');
 
 
-router.post('/add-name-meaning', async (req, res) => {
+router.post('/add-name-meaning', auth, adminRole, async (req, res) => {
     console.log(req.body)
     const { letter, meaning } = req.body;
 
@@ -19,7 +20,7 @@ router.post('/add-name-meaning', async (req, res) => {
     }
 });
 
-router.post('/add-name-fact', async (req, res) => {
+router.post('/add-name-fact', auth, adminRole, async (req, res) => {
 
     const { name, fact } = req.body;
 
@@ -106,7 +107,7 @@ router.get('/name-fact/get-all', async (req, res) => {
     }
 });
 
-router.delete("/name-meaning/delete/:id", auth, async function (req, res) {
+router.delete("/name-meaning/delete/:id", auth, adminRole, async function (req, res) {
 
     try {
         await nameMeaning.deleteOne({ _id: req.params.id })
@@ -118,7 +119,7 @@ router.delete("/name-meaning/delete/:id", auth, async function (req, res) {
 
 });
 
-router.delete("/name-fact/delete/:id", auth, async function (req, res) {
+router.delete("/name-fact/delete/:id", auth, adminRole, async function (req, res) {
 
     try {
         await nameFact.deleteOne({ _id: req.params.id })
@@ -130,7 +131,7 @@ router.delete("/name-fact/delete/:id", auth, async function (req, res) {
 
 });
 
-router.put("/name-meaning/update", auth, async function (req, res) {
+router.put("/name-meaning/update", auth, adminRole, async function (req, res) {
 
     const { letter, meaning, id } = req.body;
 
@@ -148,7 +149,7 @@ router.put("/name-meaning/update", auth, async function (req, res) {
 
 })
 
-router.put("/name-fact/update", auth, async function (req, res) {
+router.put("/name-fact/update", auth, adminRole, async function (req, res) {
 
     const { name, fact, id } = req.body;
 

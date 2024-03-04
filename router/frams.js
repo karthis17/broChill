@@ -4,6 +4,7 @@ const multer = require('multer');
 const router = require('express').Router();
 const path = require('path');
 const Jimp = require('jimp');
+const adminRole = require('../middelware/checkRole');
 const deleteImage = require('../commonFunc/delete.image');
 
 const storage = multer.diskStorage({
@@ -48,7 +49,7 @@ router.get('/get-frames', async (req, res) => {
 });
 
 
-router.post('/upload-frame', upload.single('frame'), async (req, res) => {
+router.post('/upload-frame', auth, adminRole, upload.single('frame'), async (req, res) => {
 
 
     let { frameName, frame_size, coordinates, texts, titleDifLang } = req.body;
@@ -269,7 +270,7 @@ router.get('get/:id', async (req, res) => {
 });
 
 
-router.put('/update', auth, upload.single('frame'), async (req, res) => {
+router.put('/update', auth, adminRole, upload.single('frame'), async (req, res) => {
     let { frameName, frame_size, coordinates, texts, id, frameUrl, imagePath } = req.body;
 
     console.log('Framesize:', JSON.parse(frame_size));
@@ -324,7 +325,7 @@ router.put('/update', auth, upload.single('frame'), async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
     try {
 
         const ress = await Frames.findById(req.params.id)

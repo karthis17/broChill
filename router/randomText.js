@@ -4,6 +4,8 @@ const auth = require('../middelware/auth'); const multer = require('multer');
 const path = require('path');
 const Jimp = require('jimp');
 const deleteImage = require('../commonFunc/delete.image');
+const adminRole = require('../middelware/checkRole');
+
 
 const storage = multer.diskStorage({
     destination: './uploads/', // Specify the upload directory
@@ -14,7 +16,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-router.post("/add-question", upload.single('frame'), async (req, res) => {
+router.post("/add-question", auth, adminRole, upload.single('frame'), async (req, res) => {
 
 
     let { question, texts, frame_size, coordinates, } = req.body;
@@ -176,7 +178,7 @@ router.post('/add-comment', auth, async (req, res) => {
 });
 
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
     try {
         const response = await randomText.findById(req.params.id)
 
@@ -191,7 +193,7 @@ router.delete('/delete/:id', async (req, res) => {
 });
 
 
-router.put('/update', upload.single('frame'), async (req, res) => {
+router.put('/update', auth, adminRole, upload.single('frame'), async (req, res) => {
 
     let { question, texts, frame_size, coordinates, frameUrl, framePath, id } = req.body;
 

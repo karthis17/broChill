@@ -2,9 +2,10 @@ const router = require('express').Router();
 const riddles = require('../model/riddles.model');
 const auth = require('../middelware/auth');
 
+const adminRole = require('../middelware/checkRole');
 
 
-router.post("/add-riddle", async (req, res) => {
+router.post("/add-riddle", auth, adminRole, async (req, res) => {
 
     const { question, answer, questionDifLang, answerDifLang } = req.body;
 
@@ -151,7 +152,7 @@ router.delete('/delete/:id', auth, async (req, res) => {
 
 });
 
-router.put('/update', auth, async (req, res) => {
+router.put('/update', auth, adminRole, async (req, res) => {
 
     const { question, answer, riddle_id } = req.body;
 

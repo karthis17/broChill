@@ -3,6 +3,7 @@ const Quizzes = require('../model/quizzes.model');
 const auth = require('../middelware/auth');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
+const adminRole = require('../middelware/checkRole');
 
 
 const cpUpload = uploadFile.fields([
@@ -13,13 +14,13 @@ const cpUpload = uploadFile.fields([
     { name: 'answer', maxCount: 5 }
 ]);
 
-router.post('/upload', cpUpload, (req, res) => {
-    
+router.post('/upload', auth, adminRole, cpUpload, (req, res) => {
+
     res.json(req.files)
 
 });
 
-router.post('/add-quizze', async (req, res) => {
+router.post('/add-quizze', auth, adminRole, async (req, res) => {
     const bodyData = req.body;
 
     let statement_1 = [];
@@ -120,7 +121,7 @@ router.post('/get-result', auth, async (req, res) => {
     }
 });
 
-router.delete("/delete/:id", auth, async (req, res) => {
+router.delete("/delete/:id", auth, adminRole, async (req, res) => {
 
     try {
         await Quizzes.deleteOne({ _id: req.params.id });

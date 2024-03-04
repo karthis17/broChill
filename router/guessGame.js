@@ -4,13 +4,14 @@ const path = require('path');
 const guess = require('../model/guessGame.model');
 const deleteImage = require('../commonFunc/delete.image');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const adminRole = require('../middelware/checkRole');
 
 const cpUpload = uploadFile.fields([
     { name: 'question', maxCount: 1 },
     { name: 'options', maxCount: 10 },
 ]);
 
-router.post('/upload', cpUpload, async (req, res) => {
+router.post('/upload', auth, adminRole, cpUpload, async (req, res) => {
 
     // res.json(req.files)
 
@@ -139,7 +140,7 @@ router.post('/answer', async (req, res) => {
 
 });
 
-router.delete("/delete/:id", async (req, res) => {
+router.delete("/delete/:id", auth, adminRole, async (req, res) => {
 
     try {
         const ress = await guess.findById(req.params.id);
@@ -162,7 +163,7 @@ router.delete("/delete/:id", async (req, res) => {
 
 });
 
-router.put("/update", async (req, res) => {
+router.put("/update", auth, adminRole, async (req, res) => {
 
     let { id, imagePath, question, answer, options, questionType, optionsType } = req.params;
 

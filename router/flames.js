@@ -1,11 +1,12 @@
 const Flames = require('../model/flames.model');
 const router = require('express').Router();
 const auth = require('../middelware/auth');
+const adminRole = require('../middelware/checkRole');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
 
-router.post('/add-image', uploadFile.single('image'), async (req, res) => {
+router.post('/add-image', auth, adminRole, uploadFile.single('image'), async (req, res) => {
     if (!req.file) {
         return res.status(404).send({ message: "No file found" });
     }
@@ -47,7 +48,7 @@ router.post('/', auth, async (req, res) => {
     // res.json({ result });
 });
 
-router.delete("/delete/:id", async (req, res) => {
+router.delete("/delete/:id", auth, adminRole, async (req, res) => {
     try {
         await Flames.deleteOne({ _id: req.params.id });
         res.status(200).send({ message: 'result deleted successfully' });
@@ -56,12 +57,12 @@ router.delete("/delete/:id", async (req, res) => {
     }
 });
 
-router.put("/update", uploadFile.single('image'), async (req, res) => {
+router.put("/update", auth, adminRole, uploadFile.single('image'), async (req, res) => {
 
     let imageUrl = req.body.image;
 
     if (req.file) {
-            imageUrl = await uploadAndGetFirebaseUrl(req)
+        imageUrl = await uploadAndGetFirebaseUrl(req)
     }
 
 

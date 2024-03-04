@@ -1,4 +1,6 @@
 const router = require('express').Router();
+const adminRole = require('../middelware/checkRole');
+const auth = require('../middelware/auth');
 const Menu = require('../model/menu.model');
 
 router.get('/get-all', async (req, res) => {

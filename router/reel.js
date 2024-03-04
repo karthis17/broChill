@@ -2,9 +2,10 @@ const router = require('express').Router();
 const reels = require('../model/reels.model');
 const auth = require('../middelware/auth');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const adminRole = require('../middelware/checkRole');
 
 
-router.post('/upload-reel', auth, uploadFile.single('reel'), async (req, res) => {
+router.post('/upload-reel', auth, adminRole, uploadFile.single('reel'), async (req, res) => {
 
     try {
         if (!req.file) {
@@ -185,7 +186,7 @@ router.post('/add-comment', auth, async (req, res) => {
 
 });
 
-router.delete('/delete/:reelId', auth, async (req, res) => {
+router.delete('/delete/:reelId', auth, adminRole, async (req, res) => {
 
     try {
         const reel = await reels.findById(req.params.reelId);
@@ -199,7 +200,7 @@ router.delete('/delete/:reelId', auth, async (req, res) => {
 
 });
 
-router.put("/update", auth, uploadFile.single("new_reel"), async (req, res) => {
+router.put("/update", auth, adminRole, uploadFile.single("new_reel"), async (req, res) => {
 
     console.log(req.body)
     let { description, category, title, id, fileUrl } = req.body;

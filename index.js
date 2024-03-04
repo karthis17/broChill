@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 require("dotenv").config()
 const userRouter = require("./router/user");
+const adminRouter = require("./router/admin");
 const imageRouter = require("./router/post");
 const pollRouter = require("./router/poll");
 const quizzeRouter = require("./router/quizzes");
@@ -13,6 +14,7 @@ const guessRouter = require("./router/guessGame");
 const funQuRouter = require("./router/funQuizzes");
 const riddleRouter = require("./router/riddles");
 const feedRouter = require("./router/feed");
+const generalRouter = require("./router/general-qiestion");
 const reelRouter = require("./router/reel");
 const percentageTypeRouter = require("./router/percentageType");
 const RandImgRouter = require("./router/randomImage");
@@ -38,6 +40,7 @@ app.get('/', (req, res) => {
 });
 
 app.use("/api/users", userRouter);
+app.use("/api/admin", adminRouter);
 app.use(express.static(path.join(__dirname, 'uploads')));
 app.use("/api/img", imageRouter);
 app.use("/api/poll", pollRouter);
@@ -47,6 +50,7 @@ app.use("/api/quizzes", quizzeRouter);
 app.use("/api/nameing", nameRouter);
 app.use("/api/guess-game", guessRouter);
 app.use("/api/fun-quizzes", funQuRouter);
+app.use("/api/general-question", generalRouter);
 app.use("/api/riddles", riddleRouter);
 app.use("/api/reels", reelRouter);
 app.use("/api/feeds", feedRouter);

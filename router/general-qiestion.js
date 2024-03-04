@@ -1,8 +1,7 @@
 const router = require('express').Router();
-const Quizzes = require('../model/funQuizzes.model');
+const general = require('../model/general.model');
 const auth = require('../middelware/auth');
 const adminRole = require('../middelware/checkRole');
-
 
 router.post('/add-question', auth, adminRole, async (req, res) => {
 
@@ -15,7 +14,7 @@ router.post('/add-question', auth, adminRole, async (req, res) => {
 
 
     try {
-        const ress = await Quizzes.create({ question, optionDifLang, options: [], answer, questionDifLang });
+        const ress = await general.create({ question, optionDifLang, options: [], answer, questionDifLang });
 
         res.json(ress);
     } catch (error) {
@@ -32,7 +31,7 @@ router.get('/get-all', async (req, res) => {
     const lang = req.query.lang;
 
     try {
-        const questions = await Quizzes.find();
+        const questions = await general.find();
         if (lang) {
             let result = await questions.filter(p => {
                 const question = p.questionDifLang.find(tit => tit.lang === lang);
@@ -66,13 +65,14 @@ router.post('/get-by-id/:id', async (req, res) => {
 
 
     try {
-        const questions = await Quizzes.findById(req.params.id);
+        const questions = await general.findById(req.params.id);
         if (lang) {
             const question = questions.questionDifLang.find(tit => tit.lang === lang);
             const option = questions.questionDifLang.find(tit => tit.lang === lang);
 
             questions.question = question ? question.text : questions.question;
             question.options = option.data
+
         }
         res.json(questions);
     } catch (error) {
@@ -94,7 +94,7 @@ router.post('/answer', async (req, res) => {
     }
 
     try {
-        const result = await Quizzes.findById(question_id);
+        const result = await general.findById(question_id);
         const answer = result.options.find(option => option._id === selectedOption_id);
 
         res.send(answer);
@@ -108,7 +108,7 @@ router.post('/answer', async (req, res) => {
 
 router.delete('/delete/:id', auth, adminRole, async (req, res) => {
     try {
-        await Quizzes.deleteOne({ _id: req.params.id });
+        await general.deleteOne({ _id: req.params.id });
         res.status(200).send({ message: "record deletd successfully." });
     } catch (error) {
         res.status(500).send({ message: error.message });
@@ -128,7 +128,7 @@ router.put('/update', auth, adminRole, async (req, res) => {
     }
 
     try {
-        const ress = await Quizzes.findByIdAndUpdate(id, { $set: { question, options } });
+        const ress = await general.findByIdAndUpdate(id, { $set: { question, options } });
 
         res.json(ress);
     } catch (error) {
