@@ -11,43 +11,60 @@ router.post('/upload-reel', auth, uploadFile.single('reel'), async (req, res) =>
             return res.status(400).json({ message: 'No file uploaded' });
         }
         const fileUrl = await uploadAndGetFirebaseUrl(req)
-        let { category, hashtags, titleDifLang, descriptionDifLang, title, description } = req.body;
+        let { category, titleDifLang, descriptionDifLang, title, description } = req.body;
         titleDifLang = JSON.parse(titleDifLang);
         descriptionDifLang = JSON.parse(descriptionDifLang);
         console.log(titleDifLang, descriptionDifLang)
 
-        if (!Array.isArray(hashtags)) {
-            return res.status(404).json({ message: 'hashtags must be an array' });
-        }
-
         if (!description) {
             return res.status(400).json({ message: 'Description is required' });
         }
-        const reel = await reels.create({ category, titleDifLang, fileUrl, descriptionDifLang, user: req.user.id, hashtags, title, description });
+        const reel = await reels.create({ category, titleDifLang, fileUrl, descriptionDifLang, user: req.user.id, title, description });
         return res.status(201).json(reel);
     } catch (error) {
-        console.error( error);
+        console.error(error);
         return res.status(500).json({ message: 'Internal server error:' + error });
     }
 });
 
 
-router.get('/search', async (req, res) => {
-
-    try {
-        const ress = await reels.find({ hashtags: { $in: [hashtag] } });
-        res.json(ress);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-
-});
 
 
 router.get('/category/:id', async (req, res) => {
+
+    const lang = req.query.lang
+
     try {
         const ress = await reels.find({ category: req.params.id });
-        res.json(ress);
+
+
+        if (lang) {
+
+            let balance = []
+
+            let result = await ress.filter(reel => {
+                const title = reel.titleDifLang.find(tit => tit.lang === lang);
+                const description = reel.descriptionDifLang.find(dis => dis.lang === lang);
+
+                reel.title = title ? title.text : reel.title;
+                reel.description = description ? description.text : reel.title;
+
+                if (title || description) {
+
+                    return reel;
+                } else {
+                    balance.push(reel);
+                    return false;
+                }
+
+            });
+
+            res.json([...result, ...balance]);
+        } else {
+
+            res.json(ress);
+        }
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -181,7 +198,7 @@ router.delete('/delete/:reelId', auth, async (req, res) => {
 router.put("/update", auth, uploadFile.single("new_reel"), async (req, res) => {
 
     console.log(req.body)
-    let { description, category, hashtags, title, id, fileUrl } = req.body;
+    let { description, category, title, id, fileUrl } = req.body;
     try {
         if (req.file) {
             fileUrl = await uploadAndGetFirebaseUrl(req);
@@ -190,15 +207,11 @@ router.put("/update", auth, uploadFile.single("new_reel"), async (req, res) => {
         console.log(req.file)
 
 
-        if (!Array.isArray(hashtags)) {
-            return res.status(404).json({ message: 'hashtags must be an array' });
-        }
-
         if (!description) {
             return res.status(400).json({ message: 'Description is required' });
         }
 
-        const reel = await reels.findByIdAndUpdate(id, { $set: { category, title, fileUrl, description, hashtags } });
+        const reel = await reels.findByIdAndUpdate(id, { $set: { category, title, fileUrl, description, } });
         console.log(reel);
 
         return res.status(201).json(reel);

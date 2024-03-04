@@ -44,7 +44,7 @@ router.post('/upload-feed', auth, uploadFile.single('feed'), async (req, res) =>
 
 
 
-router.get('/get-reel/:id', async (req, res) => {
+router.get('/get-feel/:id', async (req, res) => {
 
     const lang = req.query.lang;
 
@@ -70,11 +70,53 @@ router.get('/get-reel/:id', async (req, res) => {
 
 });
 
+// router.get('/category/:id', async (req, res) => {
+//     try {
+//         const ress = await feeds.find({ category: req.params.id });
+//         console.log(ress);
+//         res.json(ress);
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+// });
+
+
+
 router.get('/category/:id', async (req, res) => {
+
+    const lang = req.query.lang
+
     try {
         const ress = await feeds.find({ category: req.params.id });
-        console.log(ress);
-        res.json(ress);
+
+
+        if (lang) {
+
+            let balance = []
+
+            let result = await ress.filter(feed => {
+                const title = feed.titleDifLang.find(tit => tit.lang === lang);
+                const description = feed.descriptionDifLang.find(dis => dis.lang === lang);
+
+                feed.title = title ? title.text : feed.title;
+                feed.description = description ? description.text : feed.title;
+
+                if (title || description) {
+
+                    return feed;
+                } else {
+                    balance.push(feed);
+                    return false;
+                }
+
+            });
+
+            res.json([...result, ...balance]);
+        } else {
+
+            res.json(ress);
+        }
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -169,8 +211,8 @@ router.delete('/delete/:id', auth, async (req, res) => {
     try {
         const feed = await feeds.findById(req.params.id);
 
-            await feeds.deleteOne({ _id: await feed._id });
-            res.status(200).json({ message: "record deleted successfully" });
+        await feeds.deleteOne({ _id: await feed._id });
+        res.status(200).json({ message: "record deleted successfully" });
 
     }
     catch (error) {
