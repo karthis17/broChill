@@ -36,7 +36,7 @@ router.get('/category/:id', async (req, res) => {
     const lang = req.query.lang
 
     try {
-        const ress = await reels.find({ category: req.params.id });
+        const ress = await reels.find({ category: req.params.id }).populate('comments.user');
 
 
         if (lang) {
@@ -77,7 +77,7 @@ router.get('/get-reel/:id', async (req, res) => {
     const lang = req.query.lang;
 
     try {
-        const reel = await reels.findById(req.params.id);
+        const reel = await reels.findById(req.params.id).populate('comments.user');
 
         if (lang) {
             const title = reel.titleDifLang.find(tit => tit.lang === lang);
@@ -103,7 +103,7 @@ router.get("/get-all", async (req, res) => {
     try {
         const lang = req.query.lang;
 
-        const reelsData = await reels.find();
+        const reelsData = await reels.find().populate('comments.user');
 
         if (lang) {
             let result = await reelsData.map(reel => {
@@ -131,28 +131,31 @@ router.get("/get-all", async (req, res) => {
     }
 });
 
-router.post('/like', auth, async (req, res) => {
+router.post('/:postId/like', auth, async (req, res) => {
     try {
-        const reelId = req.body.reelId;
-        const userId = req.user.id;
+        const postId = req.params.postId;
+        const userId = req.user.id; // Assuming user is authenticated and user ID is available in request
 
-        const reel = await reels.findById(reelId);
-        if (!reel) {
-            return res.status(404).json({ message: 'reel not found' });
+        // Check if the post is already liked by the user
+        const post = await reels.findById(postId);
+        const isLiked = post.likes.includes(userId);
+
+        // Update like status based on current state
+        if (isLiked) {
+            // If already liked, unlike the post
+            post.likes.pull(userId);
+        } else {
+            // If not liked, like the post
+            post.likes.push(userId);
         }
 
-        if (reel.likes.includes(userId)) {
-            return res.status(400).json({ message: 'You have already liked this reel' });
-        }
+        // Save the updated post
+        await post.save();
 
-        // Add user's ID to the likes array and save the reel
-        reel.likes.push(userId);
-        await reel.save();
-
-        res.status(200).json({ message: 'reel liked successfully' });
+        res.status(200).json({ success: true, message: 'Post liked/unliked successfully.' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error liking/unliking post:', error);
+        res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });
     }
 });
 

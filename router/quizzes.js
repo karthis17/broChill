@@ -80,6 +80,66 @@ router.post('/add-quizze', auth, adminRole, async (req, res) => {
 
 });
 
+const cpUpload1 = uploadFile.fields([
+    { name: 'question', maxCount: 1 },
+
+    { name: 'answer', maxCount: 5 }
+]);
+
+
+router.post("/add-text-quizzes", auth, adminRole, cpUpload1, async (req, res) => {
+
+    let { statement_1, statement_2, statement_3, result } = req.body;
+
+    console.log(req.body)
+
+    statement_1 = JSON.parse(statement_1);
+    statement_2 = JSON.parse(statement_2);
+    statement_3 = JSON.parse(statement_3);
+    let results = JSON.parse(result);
+
+    if (!statement_1 || !statement_2 || !statement_3) {
+        res.status(404).json({ message: "Please provide a data" });
+    }
+
+    let promiseImgsResult = [];
+
+    if (!req.files["answer"]) {
+        res.status(404).json({ message: "Please provide a answer data" });
+    }
+
+    req.files["answer"].map((file, i) => {
+        promiseImgsResult.push(uploadAndGetFirebaseUrl(file));
+    })
+
+    let question;
+
+    if (req.files["question"]) {
+        question = await uploadAndGetFirebaseUrl(req.files["question"][0]);
+    } else {
+        question = req.body.question;
+    }
+
+    promiseImgsResult = await Promise.all(promiseImgsResult);
+
+    results = results.map((result, i) => {
+
+        result["scoreBoard"] = promiseImgsResult[i];
+
+        return result;
+
+    });
+
+    try {
+        const quizess = await Quizzes.create({ questionImage: question, results, statement_1, statement_2, statement_3 });
+        res.send({ success: true, data: quizess });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 router.get('/get-all-quizzes', async (req, res) => {
     try {
         const quizzes = await Quizzes.find();

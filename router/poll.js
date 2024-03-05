@@ -37,17 +37,22 @@ async function getVotesForOptions(pollId) {
 router.get('/get-poll/:id', async (req, res) => {
 
     try {
-        const poll = await Poll.findById(req.params.id);
+        const poll = await Poll.findById(req.params.id).populate('comments.user');
         let votes = await getVotesForOptions(req.params.id)
 
         votes.map(vote => { })
 
-        const lang = req.query.lang;
+        const lang = req.query.lang ? req.query.lang : "english";
 
         if (lang) {
             const question = poll.questionDifLang.find(tit => tit.lang === lang);
+            const option = poll.optionDifLang.find(tit => tit.lang === lang);
 
             poll.question = question ? question.text : poll.question;
+
+            if (option) {
+                poll.option = option.data;
+            }
 
             res.send({
                 poll, votes
@@ -70,18 +75,24 @@ router.get('/get-poll/:id', async (req, res) => {
 
 router.get('/getAll', async (req, res) => {
     try {
-        const lang = req.query.lang;
+        const lang = req.query.lang ? req.query.lang : "english";
 
-        const poll = await Poll.find();
+        const poll = await Poll.find().populate('comments.user');
 
         if (lang) {
-            let result = await poll.map(p => {
+            let result = await poll.filter(p => {
                 const question = p.questionDifLang.find(tit => tit.lang === lang);
                 const answer = p.optionDifLang.find(tit => tit.lang === lang);
 
                 p.question = question ? question.text : p.question;
-                p.option = answer ? answer.data : p.option;
-                return p;
+
+                if (answer && question) {
+
+                    p.option = answer.data;
+                    return p;
+                }
+                else
+                    return null;
             });
 
             res.json(result);
@@ -120,9 +131,13 @@ router.post('/vote', auth, async (req, res) => {
 
 });
 
+const cpUpload1 = uploadFile.fields([
+    { name: 'question', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 },
+]);
 
 
-router.post('/add-text-poll', auth, adminRole, uploadFile.single('question'), async (req, res) => {
+router.post('/add-text-poll', auth, adminRole, cpUpload1, async (req, res) => {
     let { question, questionDifLang, optionDifLang } = req.body;
     console.log(req.body, req.file)
 
@@ -134,15 +149,22 @@ router.post('/add-text-poll', auth, adminRole, uploadFile.single('question'), as
     if (optionDifLang) {
         optionDifLang = JSON.parse(optionDifLang);
     }
-    if (req.file) {
-        qn = await uploadAndGetFirebaseUrl(req);
+    if (req.files['question']) {
+        qn = await uploadAndGetFirebaseUrl(req.files['question'][0]);
     } else {
         qn = question;
     }
 
+    if (!req.files["thumbnail"]) {
+        return res.status(404).send({ message: "No file found" });
+
+    }
+
+    let thumbnail = await uploadAndGetFirebaseUrl(req.files["thumbnail"][0]);
+
 
     try {
-        const poll = await Poll.create({ question: qn, option: [], questionDifLang, optionDifLang });
+        const poll = await Poll.create({ question: qn, option: [], questionDifLang, optionDifLang, thumbnail });
 
         res.status(201).json({ message: 'Poll created successfully', poll });
     } catch (error) {
@@ -194,31 +216,31 @@ router.post('/add-img-poll', auth, adminRole, cpUpload, async (req, res) => {
     }
 
 });
-
-router.post('/likes', auth, async (req, res) => {
-
+router.post('/:postId/like', auth, async (req, res) => {
     try {
-        const pollId = req.body.pollId;
-        const userId = req.user.id;
+        const postId = req.params.postId;
+        const userId = req.user.id; // Assuming user is authenticated and user ID is available in request
 
-        // Check if the user has already liked the post
-        const poll = await Poll.findById(pollId);
-        if (!poll) {
-            return res.status(404).json({ message: 'poll not found' });
+        // Check if the post is already liked by the user
+        const post = await Poll.findById(postId);
+        const isLiked = post.likes.includes(userId);
+
+        // Update like status based on current state
+        if (isLiked) {
+            // If already liked, unlike the post
+            post.likes.pull(userId);
+        } else {
+            // If not liked, like the post
+            post.likes.push(userId);
         }
 
-        if (poll.likes.includes(userId)) {
-            return res.status(400).json({ message: 'You have already liked this poll' });
-        }
+        // Save the updated post
+        await post.save();
 
-        // Add user's ID to the likes array and save the poll
-        poll.likes.push(userId);
-        await poll.save();
-
-        res.status(200).json({ message: 'poll liked successfully' });
+        res.status(200).json({ success: true, message: 'Post liked/unliked successfully.' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error liking/unliking post:', error);
+        res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });
     }
 });
 

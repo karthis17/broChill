@@ -3,26 +3,89 @@ const router = require('express').Router();
 const auth = require('../middelware/auth');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 const adminRole = require('../middelware/checkRole');
+const Jimp = require('jimp');
 
-router.post("/upload-frame", auth, adminRole, uploadFile.single('frame'), async (req, res) => {
+
+const path = require('path');
+const cpUpload1 = uploadFile.fields([{ name: 'frame', maxCount: 1 },
+{ name: "thumbnail", maxCount: 1 },
+{ name: "referenceImage", maxCount: 1 }
+]);
+
+router.post("/upload-frame", auth, adminRole, cpUpload1, async (req, res) => {
 
 
-    const { frameName } = req.body;
+    let { frameName, coordinates, frame_size } = req.body;
 
-    if (!req.file) {
+    if (!coordinates) {
+        res.status(404).send({ message: "frame coordinates not found" });
+    }
+
+    if (!frame_size) {
+        res.status(404).send({ message: "frame size not found" });
+
+    }
+
+    coordinates = JSON.parse(coordinates)
+    frame_size = JSON.parse(frame_size);
+
+    if (!req.files["frame"]) {
         res.status(404).send({ menubar: 'frame is not found' });
     }
 
-    const fileUrl = await uploadAndGetFirebaseUrl(req)
+    if (!req.files["thumbnail"]) {
+        return res.status(404).send({ message: "No tumbnail file found" });
+
+    }
+
+    let thumbnail = await uploadAndGetFirebaseUrl(req.files["thumbnail"][0]);
+    let referenceImage = await uploadAndGetFirebaseUrl(req.files["referenceImage"][0]);
+
+
+    const frameUrl = await uploadAndGetFirebaseUrl(req.files["frame"][0])
 
     try {
-        const frame = await RandImg.create({ fileUrl, frameName });
+        const frame = await RandImg.create({ frameUrl, frameName, coordinates, frame_size, thumbnail, referenceImage });
         res.send(frame);
     } catch (error) {
         console.error(error);
         res.status(500).send(error.message);
     }
 
+});
+
+
+const cpUpload = uploadFile.fields([{ name: 'image', maxCount: 10 }]);
+
+router.post("/upload-images", auth, cpUpload, async (req, res) => {
+
+    try {
+        const { id } = req.body;
+
+        const frame = await RandImg.findById(id);
+
+        const ll = req.files['image'].map(async (file, i) => {
+            try {
+                const image = await uploadAndGetFirebaseUrl(file);
+
+                const baseImage = frame.frameUrl;
+                const maskImage = image;
+                const outputPath = path.join(__dirname, "../uploads/name" + i + ".png");
+
+                await applyMask(baseImage, maskImage, outputPath, frame.coordinates, frame.frame_size.height, frame.frame_size.width);
+            } catch (error) {
+                console.error("Error processing image:", error);
+                throw error;
+            }
+        });
+
+        await Promise.all(ll);
+
+        res.send({ message: "Images processed successfully" });
+    } catch (error) {
+        console.error("Error in image processing:", error);
+        res.status(500).json({ error: true, message: "Internal server error" });
+    }
 });
 
 
@@ -43,7 +106,7 @@ router.get('/get-frame', async (req, res) => {
 
 router.get('/get-all', async (req, res) => {
     try {
-        const frames = await RandImg.find();
+        const frames = await RandImg.find().populate('comments.user');
         res.send(frames);
     } catch (error) {
 
@@ -62,30 +125,31 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-
-router.post('/likes', auth, async (req, res) => {
+router.post('/:postId/like', auth, async (req, res) => {
     try {
-        const frame_id = req.body.id;
-        const userId = req.user.id;
+        const postId = req.params.postId;
+        const userId = req.user.id; // Assuming user is authenticated and user ID is available in request
 
-        // Check if the user has already liked the post
-        const frame = await RandImg.findById(frame_id);
-        if (!frame) {
-            return res.status(404).json({ message: 'frame not found' });
+        // Check if the post is already liked by the user
+        const post = await RandImg.findById(postId);
+        const isLiked = post.likes.includes(userId);
+
+        // Update like status based on current state
+        if (isLiked) {
+            // If already liked, unlike the post
+            post.likes.pull(userId);
+        } else {
+            // If not liked, like the post
+            post.likes.push(userId);
         }
 
-        if (frame.likes.includes(userId)) {
-            return res.status(400).json({ message: 'You have already liked this frame' });
-        }
+        // Save the updated post
+        await post.save();
 
-        // Add user's ID to the likes array and save the frame
-        frame.likes.push(userId);
-        await frame.save();
-
-        res.status(200).json({ message: 'frame liked successfully' });
+        res.status(200).json({ success: true, message: 'Post liked/unliked successfully.' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error liking/unliking post:', error);
+        res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });
     }
 });
 
@@ -151,6 +215,34 @@ router.put('/update', auth, adminRole, uploadFile.single('frame'), async (req, r
     }
 
 })
+
+
+
+async function applyMask(baseImagePath, maskImages, outputPath, coordinate, baseH, baseW) {
+    try {
+        const baseImage = await Jimp.read(baseImagePath);
+
+
+        const { x, y, width, height } = coordinate[0];
+        console.log(x)
+
+        const maskImage = await Jimp.read(maskImages);
+        maskImage.resize(+width, +height);
+        baseImage.resize(+baseW, +baseH);
+        baseImage.composite(maskImage, +x, +y, {
+            mode: Jimp.BLEND_DESTINATION_OVER
+        });
+
+
+        await baseImage.writeAsync(outputPath);
+
+
+        console.log('Mask applied successfully.');
+    } catch (error) {
+
+        console.error('An error occurred:', error);
+    }
+}
 
 
 

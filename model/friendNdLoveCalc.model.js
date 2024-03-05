@@ -17,6 +17,8 @@ const loveCalc = mongoose.model('loveCalc', {
         resultText: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
+    thumbnail: { type: String, required: true },
+
     createdAt: { type: Date, default: Date.now }
 
 });
@@ -35,6 +37,8 @@ const friendsCalc = mongoose.model('friendCalc', {
         resultText: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
+    thumbnail: { type: String, required: true },
+
     createdAt: { type: Date, default: Date.now }
 });
 

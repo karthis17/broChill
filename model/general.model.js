@@ -6,6 +6,7 @@ module.exports = mongoose.model("generalQuestion", {
     optionDifLang: Array,
     options: Array,
     answer: { type: Number, required: true },
+    thumbnail: { type: String },
 
     createdAt: { type: Date, default: Date.now }
 });

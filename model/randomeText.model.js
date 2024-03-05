@@ -16,6 +16,8 @@ module.exports = mongoose.model('randomText', {
         width: { type: Number, required: true },
         height: { type: Number, required: true }
     }],
+    thumbnail: String,
+    referenceImage: String,
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
     shares: { type: Number, default: 0 },
     comments: [{

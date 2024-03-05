@@ -28,7 +28,7 @@ router.post('/add-question', auth, adminRole, async (req, res) => {
 
 router.get('/get-all', async (req, res) => {
 
-    const lang = req.query.lang;
+    const lang = req.query.lang ? req.query.lang : "english";
 
     try {
         const questions = await general.find();
@@ -61,7 +61,8 @@ router.get('/get-all', async (req, res) => {
 
 
 router.post('/get-by-id/:id', async (req, res) => {
-    const lang = req.query.lang;
+    const lang = req.query.lang ? req.query.lang : "english";
+
 
 
     try {
@@ -84,6 +85,9 @@ router.post('/get-by-id/:id', async (req, res) => {
 });
 
 router.post('/answer', async (req, res) => {
+    const lang = req.query.lang ? req.query.lang : "english";
+
+
 
     const { selectedOption_id, question_id } = req.body;
 
@@ -95,6 +99,15 @@ router.post('/answer', async (req, res) => {
 
     try {
         const result = await general.findById(question_id);
+
+        if (lang) {
+            const question = result.questionDifLang.find(tit => tit.lang === lang);
+            const option = result.questionDifLang.find(tit => tit.lang === lang);
+
+            result.question = question ? question.text : result.question;
+            question.options = option.data
+        }
+
         const answer = result.options.find(option => option._id === selectedOption_id);
 
         res.send(answer);

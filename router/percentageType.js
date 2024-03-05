@@ -5,72 +5,70 @@ const multer = require('multer');
 const path = require('path');
 const Jimp = require('jimp');
 const adminRole = require('../middelware/checkRole');
-
-
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + file.originalname + Math.random() * 1000 + new Date().getMilliseconds() + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
 
-router.post("/add-single-frame", auth, adminRole, upload.single('frame'), async (req, res) => {
+// router.post("/add-single-frame", auth, adminRole, upload.single('frame'), async (req, res) => {
 
-    console.log(req.body)
-    let { question, frame_size, coordinates, questionDifLang } = req.body;
+//     console.log(req.body)
+//     let { question, frame_size, coordinates, questionDifLang } = req.body;
 
-    if (questionDifLang) {
-        questionDifLang = JSON.parse(questionDifLang);
-    }
+//     if (questionDifLang) {
+//         questionDifLang = JSON.parse(questionDifLang);
+//     }
 
-    if (frame_size) {
-        frame_size = JSON.parse(frame_size);
-    }
+//     if (frame_size) {
+//         frame_size = JSON.parse(frame_size);
+//     }
 
-    if (coordinates) {
-        coordinates = JSON.parse(coordinates);
-    }
-
-
-    if (req.file) {
-
-        try {
-            let pathF = path.join(__dirname, `../${req.file.path}`);
-            const image = await Jimp.read(pathF);
-
-            await image.resize(frame_size.width, frame_size.height);
-
-            await image.writeAsync(pathF);
-
-            console.log("Image resized successfully!");
-        } catch (error) {
-            console.error("Error:", error);
-        }
-
-    } else {
-
-        return res.status(404).send({ message: "No file found" });
-    }
-
-    let frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-
-    try {
-        const ress = await Percentage.create({ question, questionDifLang, frame: { frameUrl, path: req.file.path, coordinates, frame_size } });
-        res.send(ress);
-    } catch (error) {
-        console.error(error);
-        res.status(500).send(error.message);
-    }
-
-});
+//     if (coordinates) {
+//         coordinates = JSON.parse(coordinates);
+//     }
 
 
-const cpUpload = upload.fields([{ name: 'frame', maxCount: 2 }]);
+//     if (req.file) {
+
+//         try {
+//             let pathF = path.join(__dirname, `../${req.file.path}`);
+//             const image = await Jimp.read(pathF);
+
+//             await image.resize(frame_size.width, frame_size.height);
+
+//             await image.writeAsync(pathF);
+
+//             console.log("Image resized successfully!");
+//         } catch (error) {
+//             console.error("Error:", error);
+//         }
+
+//     } else {
+
+//         return res.status(404).send({ message: "No file found" });
+//     }
+
+//     let frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+
+//     try {
+//         const ress = await Percentage.create({ question, questionDifLang, frame: { frameUrl, path: req.file.path, coordinates, frame_size } });
+//         res.send(ress);
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).send(error.message);
+//     }
+
+// });
+
+
+const cpUpload = uploadFile.fields([{ name: 'frame', maxCount: 2 }, { name: "thumbnail", maxCount: 1 }]);
 router.post("/add-frame", auth, adminRole, cpUpload, async (req, res) => {
+
+    let range = req.body.range;
+
+    if (range) {
+        range = JSON.stringify(range)
+    }
+
     try {
         console.log(req.body);
         let { question, frames, questionDifLang } = req.body;
@@ -88,25 +86,26 @@ router.post("/add-frame", auth, adminRole, cpUpload, async (req, res) => {
         }
 
         const framePromises = req.files['frame'].map(async (frame1, i) => {
-            let frameUrl = `${req.protocol}://${req.get('host')}/${frame1.filename}`;
+
+            console.log(frame1);
+
+            let frameUrl = await uploadAndGetFirebaseUrl(frame1)
             frames[i]['frameUrl'] = frameUrl;
             console.log(frames[i]['frameUrl'])
-            frames[i]['path'] = frame1.path;
 
-            try {
-                let pathF = path.join(__dirname, `../${frame1.path}`);
-                const image = await Jimp.read(pathF);
-                await image.resize(frames[i].frame_size.width, frames[i].frame_size.height);
-                await image.writeAsync(pathF);
-                console.log("Image resized successfully!");
-            } catch (error) {
-                console.error("Error:", error);
-            }
         });
+        if (!req.files["thumbnail"]) {
+            return res.status(404).send({ message: "No file found" });
+
+        }
+
+
+
+        let thumbnail = await uploadAndGetFirebaseUrl(req.files['thumbnail'][0]);
 
         await Promise.all(framePromises);
 
-        const ress = await Percentage.create({ question, questionDifLang, frames });
+        const ress = await Percentage.create({ question, questionDifLang, frames, thumbnail, range });
         res.send(ress);
     } catch (error) {
         console.error(error);
@@ -120,7 +119,7 @@ router.get('/get-all', async (req, res) => {
     try {
         const lang = req.query.lang;
 
-        const result = await Percentage.find();
+        const result = await Percentage.find().populate('comments.user');
         if (lang && lang.toLowerCase() !== "english") {
             let ress = await result.filter(p => {
                 const question = p.questionDifLang.find(tit => tit.lang === lang);
@@ -148,29 +147,31 @@ router.get('/get-all', async (req, res) => {
 
 
 
-router.post('/likes', auth, async (req, res) => {
+router.post('/:postId/like', auth, async (req, res) => {
     try {
-        const percentage_id = req.body.id;
-        const userId = req.user.id;
+        const postId = req.params.postId;
+        const userId = req.user.id; // Assuming user is authenticated and user ID is available in request
 
-        // Check if the user has already liked the post
-        const percentageType = await Percentage.findById(percentage_id);
-        if (!percentageType) {
-            return res.status(404).json({ message: 'percentageType not found' });
+        // Check if the post is already liked by the user
+        const post = await Percentage.findById(postId);
+        const isLiked = post.likes.includes(userId);
+
+        // Update like status based on current state
+        if (isLiked) {
+            // If already liked, unlike the post
+            post.likes.pull(userId);
+        } else {
+            // If not liked, like the post
+            post.likes.push(userId);
         }
 
-        if (percentageType.likes.includes(userId)) {
-            return res.status(400).json({ message: 'You have already liked this percentageType' });
-        }
+        // Save the updated post
+        await post.save();
 
-        // Add user's ID to the likes array and save the percentageType
-        percentageType.likes.push(userId);
-        await percentageType.save();
-
-        res.status(200).json({ message: 'percentageType liked successfully' });
+        res.status(200).json({ success: true, message: 'Post liked/unliked successfully.' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error liking/unliking post:', error);
+        res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });
     }
 });
 
@@ -195,6 +196,26 @@ router.post('/likes', auth, async (req, res) => {
 // });
 
 
+router.get('/single-percentage/:id', async (req, res) => {
+    try {
+        const re = await Percentage.findById(req.params.id);
+
+        const randomNumber = Math.floor(Math.random() * 100 + 1);
+        const baseImage = await re.frame[0].frameUrl;
+        const coord = await re.frame[0].coordinates;
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id + await frame._id}.png`);
+
+
+        // await the result of applyMask
+        let ress = await applyMask(baseImage, outputPath, randomNumber, coord);
+
+
+        res.send({ _id: req.params.id, result: ress });
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+})
+
 router.get('/genarate/:id', async (req, res) => {
 
     try {
@@ -202,15 +223,15 @@ router.get('/genarate/:id', async (req, res) => {
 
         const result = await Promise.all(ress.frames.map(async (frame, i) => {
             const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
-            const baseImage = path.join(__dirname, `../${await frame.path}`);
+            const baseImage = await frame.frameUrl;
             const coord = await frame.coordinates;
             const outputPath = path.join(__dirname, `../uploads/${req.params.id + await frame._id}.png`);
 
             // await the result of applyMask
-            await applyMask(baseImage, outputPath, randomNumber, coord);
+            let ress = await applyMask(baseImage, outputPath, randomNumber, coord);
 
             return {
-                result1: `${req.protocol}://${req.get('host')}/${`${req.params.id + await frame._id}.png`}`
+                result1: ress
             };
         }));
 
@@ -262,7 +283,7 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
     }
 });
 
-const cpUpload1 = upload.fields([{ name: 'frame', maxCount: 2 }]);
+const cpUpload1 = uploadFile.fields([{ name: 'frame', maxCount: 2 }]);
 
 router.put('/update', cpUpload1, async (req, res) => {
 
@@ -311,8 +332,7 @@ router.put('/update', cpUpload1, async (req, res) => {
 
 })
 
-
-async function applyMask(baseImagePath, outputPath, text, coordinates) {
+async function applyMask(baseImagePath, text, coordinates) {
     try {
         const image = await Jimp.read(baseImagePath);
 
@@ -335,12 +355,15 @@ async function applyMask(baseImagePath, outputPath, text, coordinates) {
         // Print the text in the center of the region
         image.print(font, textX, textY, text);
 
-        // Save the modified image
-        await image.writeAsync(outputPath);
+        // Convert the modified image to a data URL
+        const imageData = await image.getBase64Async(Jimp.AUTO);
 
         console.log("Text overlay added successfully.");
+
+        return imageData; // Return the data URL
     } catch (error) {
         console.error("Error:", error);
+        throw error; // Throw the error to handle it externally
     }
 }
 

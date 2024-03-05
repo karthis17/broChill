@@ -104,6 +104,8 @@ router.get('/get-all', async (req, res) => {
 
 router.post('/play', async (req, res) => {
 
+    let lang = req.params.lang;
+
     const { option, questionId } = req.body;
 
     if (!option || !questionId) {

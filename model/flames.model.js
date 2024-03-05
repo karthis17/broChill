@@ -11,5 +11,6 @@ module.exports = mongoose.model('flames', {
         name2: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
+    thumbnail: { type: String },
     createdAt: { type: Date, default: Date.now }
 });

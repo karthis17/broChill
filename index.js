@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 require("dotenv").config()
 const userRouter = require("./router/user");
+const allRouter = require("./router/fetchAll");
 const adminRouter = require("./router/admin");
 const imageRouter = require("./router/post");
 const pollRouter = require("./router/poll");
@@ -11,7 +12,7 @@ const frameRouter = require("./router/frams");
 const pickRouter = require("./router/pickOneKickOne");
 const nameRouter = require("./router/nameMeaningNdFact");
 const guessRouter = require("./router/guessGame");
-const funQuRouter = require("./router/funQuizzes");
+const funQuRouter = require("./router/fanQuizzes");
 const riddleRouter = require("./router/riddles");
 const feedRouter = require("./router/feed");
 const generalRouter = require("./router/general-qiestion");
@@ -40,6 +41,7 @@ app.get('/', (req, res) => {
 });
 
 app.use("/api/users", userRouter);
+app.use("/api", allRouter);
 app.use("/api/admin", adminRouter);
 app.use(express.static(path.join(__dirname, 'uploads')));
 app.use("/api/img", imageRouter);

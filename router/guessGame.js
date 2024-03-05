@@ -66,19 +66,43 @@ router.post('/upload', auth, adminRole, cpUpload, async (req, res) => {
 
 router.get('/get-all', async (req, res) => {
 
-    const lang = req.query.lang;
+    const lang = req.query.lang ? req.query.lang : "english";
 
     try {
         const questions = await guess.find();
         if (lang && lang.toLowerCase() !== "english") {
             let result = await questions.filter(p => {
-                const question = p.questionDifLang.find(tit => tit.lang === lang);
+                if (p.questionDifLang && p.optionDifLang) {
 
-                if (question) {
-                    p.question = question.text;
-                    return p;
+                    const question = p.questionDifLang.find(tit => tit.lang === lang);
+                    const option = p.optionDifLang.find(tit => tit.lang === lang);
+
+                    if (question, option) {
+                        p.question = question.text;
+                        p.option = option.data;
+                        return p;
+                    } else {
+                        return false;
+                    }
+                } else if (p.questionDifLang) {
+                    const question = p.questionDifLang.find(tit => tit.lang === lang);
+                    if (question) {
+                        p.question = question.text;
+                        return p;
+                    } else {
+                        return false;
+                    }
+                } else if (p.optionDifLang) {
+                    const option = p.optionDifLang.find(tit => tit.lang === lang);
+
+                    if (option) {
+                        p.option = option.data;
+                        return p;
+                    } else {
+                        return false;
+                    }
                 } else {
-                    return false;
+                    return p;
                 }
             });
 
@@ -102,12 +126,18 @@ router.post('/get-by-id/:id', async (req, res) => {
 
     try {
         const questions = await guess.findById(req.params.id);
-        if (lang) {
-            const question = questions.questionDifLang.find(tit => tit.lang === lang);
+        if (lang && questions.questionType === 'text') {
+            const question = p.questionDifLang.find(tit => tit.lang === lang);
 
             questions.question = question ? question.text : questions.question;
-
         }
+
+        if (questions.optionsType === 'text') {
+            const option = p.optionDifLang.find(tit => tit.lang === lang ? lang : "english");
+
+            questions.option = option.data
+        }
+
         res.json(questions);
     } catch (error) {
 
@@ -119,6 +149,8 @@ router.post('/get-by-id/:id', async (req, res) => {
 
 router.post('/answer', async (req, res) => {
 
+    let lang = req.query.lang ? req.query.lang : "english";
+
     const { selectedOption_id, question_id } = req.body;
 
     if (!selectedOption_id || !question_id) {
@@ -129,9 +161,14 @@ router.post('/answer', async (req, res) => {
 
     try {
         const result = await guess.findById(question_id);
-        const answer = result.options.find(option => option._id === selectedOption_id);
 
-        res.send(answer);
+        if (result.answer === selectedOption_id) {
+
+            let answer = result.optionDifLang.find(tit => { tit.lang.toLowerCase() === lang.toLowerCase() });
+
+            res.send({ answer: true, result: answer.data[selectedOption_id] });
+        }
+
     } catch (error) {
 
         res.status(500).send(error.message);

@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../model/user.model");
 const Admin = require("../model/admin.model");
 
+
 const authMiddleware = function (req, res, next) {
     const token = req.header("Authorization");
 
@@ -31,7 +32,23 @@ const authMiddleware = function (req, res, next) {
                 });
             }
         }).catch((error) => {
-            res.status(401).json({ message: "Auth Error" });
+            if (req.user && !req.role) {
+                User.findOne({ googleId: req.user.googleId }).then((user) => {
+                    if (user) {
+                        req.user = user;
+                        req.role = "user"; // Set role to user
+                        next(); // Continue to the next middleware or route handler
+                    } else {
+                        // User not found by Google ID
+                        return res.status(401).json({ message: "Auth Error" });
+                    }
+                }).catch((error) => {
+                    res.status(401).json({ message: "Auth Error" });
+                });
+            } else {
+                // No user found in the database
+                res.status(401).json({ message: "Auth Error" });
+            }
         });
 
     } catch (e) {
@@ -39,5 +56,6 @@ const authMiddleware = function (req, res, next) {
         res.status(500).send({ message: "Invalid Token" });
     }
 };
+
 
 module.exports = authMiddleware;

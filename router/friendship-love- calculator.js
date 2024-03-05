@@ -4,7 +4,12 @@ const adminRole = require('../middelware/checkRole');
 const { friendsCalc, loveCalc } = require('../model/friendNdLoveCalc.model');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
-router.post('/add-love-quotes', auth, adminRole, uploadFile.single('image'), async (req, res) => {
+const cpUpload = uploadFile.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 },
+]);
+
+router.post('/add-love-quotes', auth, adminRole, cpUpload, async (req, res) => {
 
     const { maxPercentage, minPercentage, text } = req.body;
     console.log(req.file)
@@ -17,18 +22,24 @@ router.post('/add-love-quotes', auth, adminRole, uploadFile.single('image'), asy
         res.status(400).json({ errors: "text must be an array" });
     }
 
-    const resultImage = await uploadAndGetFirebaseUrl(req)
+    let thumbnail = await uploadAndGetFirebaseUrl(req.files["thumbnail"][0]);
+
+    let resultImage = await uploadAndGetFirebaseUrl(req.files["image"][0]);
 
     try {
-        const response = await loveCalc.create({ maxPercentage, minPercentage, text, resultImage });
+        const response = await loveCalc.create({ maxPercentage, minPercentage, text, resultImage, thumbnail });
         res.send(response);
     } catch (error) {
         res.status(500).send({ error: error.message });
     }
 });
 
+const cpUpload1 = uploadFile.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 },
+]);
 
-router.post('/add-friend-quotes', auth, adminRole, uploadFile.single('image'), async (req, res) => {
+router.post('/add-friend-quotes', auth, adminRole, cpUpload1, async (req, res) => {
 
     const { maxPercentage, minPercentage, text } = req.body;
 
@@ -40,10 +51,12 @@ router.post('/add-friend-quotes', auth, adminRole, uploadFile.single('image'), a
         res.status(400).json({ errors: "text must be an array" });
     }
 
-    const resultImage = await uploadAndGetFirebaseUrl(req);
+    let thumbnail = await uploadAndGetFirebaseUrl(req.files["thumbnail"][0]);
+
+    let resultImage = await uploadAndGetFirebaseUrl(req.files["image"][0]);
 
     try {
-        const response = await friendsCalc.create({ maxPercentage, minPercentage, text, resultImage });
+        const response = await friendsCalc.create({ maxPercentage, minPercentage, text, resultImage, thumbnail });
         res.send(response);
     } catch (error) {
         res.status(500).send({ error: error.message });

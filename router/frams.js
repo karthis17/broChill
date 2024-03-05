@@ -6,21 +6,13 @@ const path = require('path');
 const Jimp = require('jimp');
 const adminRole = require('../middelware/checkRole');
 const deleteImage = require('../commonFunc/delete.image');
-
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + file.originalname + new Date().getMilliseconds() + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
 router.get('/get-frames', async (req, res) => {
     const lang = req.query.lang;
     try {
-        const response = await Frames.find();
+        const response = await Frames.find().populate('comments.user');
         if (lang && lang.toLowerCase() !== "english") {
             let result = await response.filter(frame => {
                 const title = frame.titleDifLang.find(tit => tit.lang === lang);
@@ -48,8 +40,12 @@ router.get('/get-frames', async (req, res) => {
     }
 });
 
+const cpUpload1 = uploadFile.fields([
+    { name: 'frame', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 10 },
+]);
 
-router.post('/upload-frame', auth, adminRole, upload.single('frame'), async (req, res) => {
+router.post('/upload-frame', auth, adminRole, cpUpload1, async (req, res) => {
 
 
     let { frameName, frame_size, coordinates, texts, titleDifLang } = req.body;
@@ -64,22 +60,11 @@ router.post('/upload-frame', auth, adminRole, upload.single('frame'), async (req
     coordinates = JSON.parse(coordinates);
     texts = JSON.parse(texts);
 
-    if (req.file) {
 
-        try {
-            let pathF = path.join(__dirname, `../${req.file.path}`);
-            const image = await Jimp.read(pathF);
-
-            await image.resize(frame_size.width, frame_size.height);
-
-            await image.writeAsync(pathF);
-
-            console.log("Image resized successfully!");
-        } catch (error) {
-            console.error("Error:", error);
-        }
-
+    if (!req.file) {
+        return res.status(404).send({ message: "No file found" });
     }
+
     texts.forEach((text, i) => {
         let num = text.text.split(' ').filter(text => text.includes("<fname"));
         console.log('Num:', num);
@@ -88,14 +73,14 @@ router.post('/upload-frame', auth, adminRole, upload.single('frame'), async (req
 
     console.log('ss:', frame_size, 'cc:', coordinates, 'tt:', texts);
 
-    if (!req.file) {
-        return res.status(404).send({ message: "No file found" });
-    }
 
-    let frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
 
     try {
-        const results = await Frames.create({ frameName, frameUrl, frame_size, texts, coordinates, path: req.file.path, titleDifLang });
+
+        let frameUrl = await uploadAndGetFirebaseUrl(req.files['frame'][0]);
+        let thumbnail = await uploadAndGetFirebaseUrl(req.files['thumbnail'][0])
+
+        const results = await Frames.create({ frameName, frameUrl, frame_size, texts, coordinates, path: req.file.path, titleDifLang, thumbnail });
 
 
         res.send(results);
@@ -107,7 +92,7 @@ router.post('/upload-frame', auth, adminRole, upload.single('frame'), async (req
 });
 
 
-const cpUpload = upload.fields([
+const cpUpload = uploadFile.fields([
     { name: 'image', maxCount: 5 },
 ]);
 
@@ -191,29 +176,31 @@ router.post('/upload-image', auth, cpUpload, async (req, res) => {
 
 });
 
-router.post('/likes', auth, async (req, res) => {
-
+router.post('/:postId/like', auth, async (req, res) => {
     try {
-        const frame_id = req.body.frame_id;
-        const userId = req.user.id;
-        console.log(req.body)
+        const postId = req.params.postId;
+        const userId = req.user.id; // Assuming user is authenticated and user ID is available in request
 
-        const frame = await Frames.findById(frame_id);
-        if (!frame) {
-            return res.status(404).json({ message: 'frame not found' });
+        // Check if the post is already liked by the user
+        const post = await Frames.findById(postId);
+        const isLiked = post.likes.includes(userId);
+
+        // Update like status based on current state
+        if (isLiked) {
+            // If already liked, unlike the post
+            post.likes.pull(userId);
+        } else {
+            // If not liked, like the post
+            post.likes.push(userId);
         }
 
-        if (frame.likes.includes(userId)) {
-            return res.status(400).json({ message: 'You have already liked this frame' });
-        }
+        // Save the updated post
+        await post.save();
 
-        frame.likes.push(userId);
-        await frame.save();
-
-        res.status(200).json({ message: 'frame liked successfully' });
+        res.status(200).json({ success: true, message: 'Post liked/unliked successfully.' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error liking/unliking post:', error);
+        res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });
     }
 });
 
@@ -251,7 +238,7 @@ router.get('get/:id', async (req, res) => {
     const lang = req.query.lang;
 
     try {
-        const response = await Frames.findById(req.params.id);
+        const response = await Frames.findById(req.params.id).populate('comments.user');
         if (lang) {
             const title = response.titleDifLang.find(tit => tit.lang === lang);
 
@@ -270,7 +257,7 @@ router.get('get/:id', async (req, res) => {
 });
 
 
-router.put('/update', auth, adminRole, upload.single('frame'), async (req, res) => {
+router.put('/update', auth, adminRole, uploadFile.single('frame'), async (req, res) => {
     let { frameName, frame_size, coordinates, texts, id, frameUrl, imagePath } = req.body;
 
     console.log('Framesize:', JSON.parse(frame_size));
@@ -294,21 +281,12 @@ router.put('/update', auth, adminRole, upload.single('frame'), async (req, res) 
 
     if (req.file) {
         try {
-            let pathF = path.join(__dirname, `../${req.file.path}`);
-            const image = await Jimp.read(pathF);
-
-            await image.resize(frame_size.width, frame_size.height);
-
-            await image.writeAsync(pathF);
-
-            console.log("Image resized successfully!");
+            frameUrl = await uploadAndGetFirebaseUrl(req);
         } catch (error) {
             console.error("Error:", error);
         }
 
-        frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-        let im = path.join(__dirname, `../${imagePath}`)
-        await deleteImage(im);
+        // await deleteImage(im);
         imagePath = req.file.path;
     }
 

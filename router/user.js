@@ -6,11 +6,13 @@ const router = express.Router();
 const User = require("../model/user.model");
 const Follow = require("../model/follow.model");
 const auth = require("../middelware/auth");
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
 
 router.post(
     "/signup",
+    uploadFile.single('avatar'),
     [
         check("username", "Please Enter a Valid Username")
             .not()
@@ -42,10 +44,13 @@ router.post(
                 });
             }
 
+            const avatar = await uploadAndGetFirebaseUrl(req);
+
             user = new User({
                 username,
                 email,
-                password
+                password,
+                avatar
             });
 
             const salt = await bcrypt.genSalt(10);

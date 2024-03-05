@@ -5,15 +5,33 @@ const adminRole = require('../middelware/checkRole');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
+const cpUpload = uploadFile.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 },
+    { name: 'referenceImage', maxCount: 1 },
+]);
 
-router.post('/add-image', auth, adminRole, uploadFile.single('image'), async (req, res) => {
-    if (!req.file) {
+router.post('/add-image', auth, adminRole, cpUpload, async (req, res) => {
+    if (!req.files["image"]) {
         return res.status(404).send({ message: "No file found" });
     }
-    let imageUrl = await uploadAndGetFirebaseUrl(req);
+
+    if (!req.files["thumbnail"]) {
+        return res.status(404).send({ message: "No file found" });
+
+    }
+    if (!req.files["referenceImage"]) {
+        return res.status(404).send({ message: "No file found" });
+
+    }
+
+    let thumbnail = await uploadAndGetFirebaseUrl(req.files["thumbnail"][0]);
+    let referenceImage = await uploadAndGetFirebaseUrl(req.files["referenceImage"][0]);
+
+    let imageUrl = await uploadAndGetFirebaseUrl(req.files["image"][0]);
 
     try {
-        const result = await Flames.create({ imageUrl, flamesWord: req.body.word });
+        const result = await Flames.create({ imageUrl, flamesWord: req.body.word, thumbnail, referenceImage });
         res.send(result)
     } catch (error) {
         res.status(500).send({ message: "Error creating image", error: error.message });

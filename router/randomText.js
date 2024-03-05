@@ -5,18 +5,17 @@ const path = require('path');
 const Jimp = require('jimp');
 const deleteImage = require('../commonFunc/delete.image');
 const adminRole = require('../middelware/checkRole');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
-const storage = multer.diskStorage({
-    destination: './uploads/', // Specify the upload directory
-    filename: function (req, file, callback) {
-        callback(null, file.fieldname + file.originalname + new Date().getMilliseconds() + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
 
-const upload = multer({ storage: storage });
 
-router.post("/add-question", auth, adminRole, upload.single('frame'), async (req, res) => {
+const cpUpload1 = uploadFile.fields([{ name: 'frame', maxCount: 1 }
+    , { name: "thumbnail", maxCount: 1 }
+    , { name: "referenceImage", maxCount: 1 }
+]);
+
+router.post("/add-question", auth, adminRole, cpUpload1, async (req, res) => {
 
 
     let { question, texts, frame_size, coordinates, } = req.body;
@@ -29,31 +28,31 @@ router.post("/add-question", auth, adminRole, upload.single('frame'), async (req
         coordinates = JSON.parse(coordinates);
     }
 
-    if (req.file) {
-
-        try {
-            let pathF = path.join(__dirname, `../${req.file.path}`);
-            const image = await Jimp.read(pathF);
-
-            await image.resize(frame_size.width, frame_size.height);
-
-            await image.writeAsync(pathF);
-
-            console.log("Image resized successfully!");
-        } catch (error) {
-            console.error("Error:", error);
-        }
-
-    } else {
-
-        return res.status(404).send({ message: "No file found" });
+    if (!req.files["frame"]) {
+        res.status(404).send({ menubar: 'frame is not found' });
     }
 
-    let frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+    if (!req.files["thumbnail"]) {
+        return res.status(404).send({ message: "No tumbnail file found" });
+
+    }
+    if (!req.files["referenceImage"]) {
+        return res.status(404).send({ message: "No tumbnail file found" });
+
+    }
+
+    let thumbnail = await uploadAndGetFirebaseUrl(req.files["thumbnail"][0]);
+    let referenceImage = await uploadAndGetFirebaseUrl(req.files["referenceImage"][0]);
+
+
+    const frameUrl = await uploadAndGetFirebaseUrl(req.files["frame"][0])
+
+
+
 
 
     try {
-        const ress = await randomText.create({ question, texts, frameUrl, path: req.file.path, coordinates, frame_size });
+        const ress = await randomText.create({ question, texts, frameUrl, path: req.file.path, coordinates, frame_size, thumbnail, referenceImage });
         res.send(ress);
     } catch (error) {
         console.error(error);
@@ -86,7 +85,7 @@ router.get('/genarate/:id', async (req, res) => {
 
 router.get('/get-all', async (req, res) => {
     try {
-        const result = await randomText.find();
+        const result = await randomText.find().populate('comments.user');
         res.send(result);
     } catch (error) {
 
@@ -118,33 +117,34 @@ router.get('/get-all', async (req, res) => {
 //         throw err;
 //     }
 // });
-
-
-router.post('/likes', auth, async (req, res) => {
+router.post('/:postId/like', auth, async (req, res) => {
     try {
-        const id = req.body.id;
-        const userId = req.user.id;
+        const postId = req.params.postId;
+        const userId = req.user.id; // Assuming user is authenticated and user ID is available in request
 
-        // Check if the user has already liked the post
-        const randText = await randomText.findById(id);
-        if (!randText) {
-            return res.status(404).json({ message: 'randText not found' });
+        // Check if the post is already liked by the user
+        const post = await randomText.findById(postId);
+        const isLiked = post.likes.includes(userId);
+
+        // Update like status based on current state
+        if (isLiked) {
+            // If already liked, unlike the post
+            post.likes.pull(userId);
+        } else {
+            // If not liked, like the post
+            post.likes.push(userId);
         }
 
-        if (randText.likes.includes(userId)) {
-            return res.status(400).json({ message: 'You have already liked this randText' });
-        }
+        // Save the updated post
+        await post.save();
 
-        // Add user's ID to the likes array and save the randText
-        randText.likes.push(userId);
-        await randText.save();
-
-        res.status(200).json({ message: 'randText liked successfully' });
+        res.status(200).json({ success: true, message: 'Post liked/unliked successfully.' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error liking/unliking post:', error);
+        res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });
     }
 });
+
 
 
 
@@ -193,52 +193,52 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 });
 
 
-router.put('/update', auth, adminRole, upload.single('frame'), async (req, res) => {
+// router.put('/update', auth, adminRole, upload.single('frame'), async (req, res) => {
 
-    let { question, texts, frame_size, coordinates, frameUrl, framePath, id } = req.body;
+//     let { question, texts, frame_size, coordinates, frameUrl, framePath, id } = req.body;
 
-    if (frame_size) {
-        frame_size = JSON.parse(frame_size);
-    }
+//     if (frame_size) {
+//         frame_size = JSON.parse(frame_size);
+//     }
 
-    if (coordinates) {
-        coordinates = JSON.parse(coordinates);
-    }
+//     if (coordinates) {
+//         coordinates = JSON.parse(coordinates);
+//     }
 
-    if (req.file) {
+//     if (req.file) {
 
-        try {
-            let pathF = path.join(__dirname, `../${req.file.path}`);
-            const image = await Jimp.read(pathF);
+//         try {
+//             let pathF = path.join(__dirname, `../${req.file.path}`);
+//             const image = await Jimp.read(pathF);
 
-            await image.resize(frame_size.width, frame_size.height);
+//             await image.resize(frame_size.width, frame_size.height);
 
-            await image.writeAsync(pathF);
+//             await image.writeAsync(pathF);
 
-            frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+//             frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
 
-            framePath = req.file.path;
+//             framePath = req.file.path;
 
-            console.log("Image resized successfully!");
-        } catch (error) {
-            console.error("Error:", error);
-        }
+//             console.log("Image resized successfully!");
+//         } catch (error) {
+//             console.error("Error:", error);
+//         }
 
-    }
-
-
+//     }
 
 
-    try {
-        const ress = await randomText.findByIdAndUpdate(id, { $set: { question, texts, frameUrl, path: framePath, coordinates, frame_size } });
 
-        res.send(ress);
-    } catch (error) {
-        console.error(error);
-        res.status(500).send(error.message);
-    }
 
-});
+//     try {
+//         const ress = await randomText.findByIdAndUpdate(id, { $set: { question, texts, frameUrl, path: framePath, coordinates, frame_size } });
+
+//         res.send(ress);
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).send(error.message);
+//     }
+
+// });
 
 
 async function applyMask(baseImagePath, outputPath, text, coordinates) {

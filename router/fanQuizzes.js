@@ -1,13 +1,30 @@
 const router = require('express').Router();
-const Quizzes = require('../model/funQuizzes.model');
+const Quizzes = require('../model/fanQuizzes.model');
 const auth = require('../middelware/auth');
 const adminRole = require('../middelware/checkRole');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
-router.post('/add-question', auth, adminRole, async (req, res) => {
+router.post('/add-question', auth, adminRole, uploadFile.single('thumbnail'), async (req, res) => {
 
     let { question, optionDifLang, answer, questionDifLang } = req.body;
 
+    if (questionDifLang) {
+        questionDifLang = JSON.parse(questionDifLang);
+    }
+
+    if (optionDifLang) {
+        optionDifLang = JSON.parse(optionDifLang);
+    }
+
+    let option = optionDifLang[0].data;
+
+
+    if (!req.file) {
+        res.status(404).send({ error: 'File not found', message: 'add thumbnail' });
+    }
+
+    let thumbnail = await uploadAndGetFirebaseUrl(req);
 
     if (!question) {
         return res.status(404).json({ error: "question not found" });
@@ -15,7 +32,7 @@ router.post('/add-question', auth, adminRole, async (req, res) => {
 
 
     try {
-        const ress = await Quizzes.create({ question, optionDifLang, options: [], answer, questionDifLang });
+        const ress = await Quizzes.create({ question, optionDifLang, options: option, answer, questionDifLang, thumbnail });
 
         res.json(ress);
     } catch (error) {
@@ -29,7 +46,7 @@ router.post('/add-question', auth, adminRole, async (req, res) => {
 
 router.get('/get-all', async (req, res) => {
 
-    const lang = req.query.lang;
+    const lang = req.query.lang ? req.query.lang : "english";
 
     try {
         const questions = await Quizzes.find();
@@ -85,6 +102,8 @@ router.post('/get-by-id/:id', async (req, res) => {
 
 router.post('/answer', async (req, res) => {
 
+    let lang = req.query.lang ? req.query.lang : "english";
+
     const { selectedOption_id, question_id } = req.body;
 
     if (!selectedOption_id || !question_id) {
@@ -95,6 +114,15 @@ router.post('/answer', async (req, res) => {
 
     try {
         const result = await Quizzes.findById(question_id);
+
+        if (lang) {
+            const question = result.questionDifLang.find(tit => tit.lang === lang);
+            const option = result.optionDifLang.find(tit => tit.lang === lang);
+
+            result.question = question ? question.text : result.question;
+            question.options = option.data
+        }
+
         const answer = result.options.find(option => option._id === selectedOption_id);
 
         res.send(answer);

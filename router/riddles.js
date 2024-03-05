@@ -30,7 +30,7 @@ router.get('/get-all', async (req, res) => {
     const lang = "kannada";
 
     try {
-        const ridles = await riddles.find();
+        const ridles = await riddles.find().populate('comments.user');
         if (lang && lang.toLowerCase() !== "english") {
 
             const result = ridles.filter(ridle => {
@@ -70,7 +70,7 @@ router.post('/get-by-id/:id', async (req, res) => {
 
 
     try {
-        const riddle = await riddles.findById(req.params.id);
+        const riddle = await riddles.findById(req.params.id).populate('comments.user');
         if (lang) {
             const question = riddle.questionDifLang.find(tit => tit.lang === lang);
             const answer = riddle.answerDifLang.find(dis => dis.lang === lang);
