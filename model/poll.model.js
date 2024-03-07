@@ -1,15 +1,20 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-module.exports = mongoose.model("poll", {
+const optionSchema = new mongoose.Schema({
+    option: { type: String, required: true },
+    vote: { type: Number, default: 0 },
+    percentage: { type: Number, default: 0 }, // Percentage of votes for this option
+    votedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Array of user IDs who voted for this option
+});
+
+const pollSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     question: { type: String, required: true },
-    option: Array,
-    optionDifLang: Array,
-    questionDifLang: Array,
-    votes: [{
-        votedOption: Number,
-        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        createdAt: { type: Date, default: Date.now }
-    }],
+    description: { type: String, required: true },
+    questionType: { type: String, required: true },
+    optionType: { type: String, required: true },
+    language: String,
+    options: [optionSchema],
     thumbnail: { type: String },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     comments: [{
@@ -18,6 +23,9 @@ module.exports = mongoose.model("poll", {
         createdAt: { type: Date, default: Date.now }
     }],
     shares: { type: Number, default: 0 },
-    createdAt: { type: Date, default: Date.now }
+    totalVotes: { type: Number, default: 0 } // Total number of votes for the poll
+}, { timestamps: true });
 
-})
+const Poll = mongoose.model('Poll', pollSchema);
+
+module.exports = Poll;

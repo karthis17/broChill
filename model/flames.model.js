@@ -1,16 +1,13 @@
 const { default: mongoose } = require("mongoose");
 
 module.exports = mongoose.model('flames', {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    description: { type: String, required: true },
+    language: String,
+    thumbnail: { type: String },
 
     imageUrl: { type: String, required: true },
     flamesWord: { type: String, required: true },
 
-    users: [{
-        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-        name1: { type: String, required: true },
-        name2: { type: String, required: true },
-        createdAt: { type: Date, default: Date.now }
-    }],
-    thumbnail: { type: String },
     createdAt: { type: Date, default: Date.now }
 });

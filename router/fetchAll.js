@@ -12,7 +12,7 @@ const Percentage = require('../model/percentageType.model');
 const Pick = require('../model/pickOneKickOne.model');
 const Poll = require('../model/poll.model');
 const RandImg = require('../model/randomImage.model');
-const RandTxt = require('../model/randomeText.model');
+const RandTxt = require('../model/funtest.model');
 const Riddle = require('../model/riddles.model');
 
 

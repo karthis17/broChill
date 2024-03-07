@@ -160,7 +160,7 @@ router.post(
 
 router.get("/me", auth, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('username', 'email');
         res.json(user);
     }
     catch (e) {

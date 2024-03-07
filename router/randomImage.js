@@ -1,4 +1,4 @@
-const RandImg = require('../model/randomImage.model');
+const RandImg = require('../model/funtest.model');
 const router = require('express').Router();
 const auth = require('../middelware/auth');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
@@ -15,7 +15,7 @@ const cpUpload1 = uploadFile.fields([{ name: 'frame', maxCount: 1 },
 router.post("/upload-frame", auth, adminRole, cpUpload1, async (req, res) => {
 
 
-    let { frameName, coordinates, frame_size } = req.body;
+    let { description, coordinates, frame_size, textCoordinates } = req.body;
 
     if (!coordinates) {
         res.status(404).send({ message: "frame coordinates not found" });
@@ -24,6 +24,10 @@ router.post("/upload-frame", auth, adminRole, cpUpload1, async (req, res) => {
     if (!frame_size) {
         res.status(404).send({ message: "frame size not found" });
 
+    }
+
+    if (textCoordinates) {
+        textCoordinates = JSON.parse(textCoordinates);
     }
 
     coordinates = JSON.parse(coordinates)
@@ -45,7 +49,13 @@ router.post("/upload-frame", auth, adminRole, cpUpload1, async (req, res) => {
     const frameUrl = await uploadAndGetFirebaseUrl(req.files["frame"][0])
 
     try {
-        const frame = await RandImg.create({ frameUrl, frameName, coordinates, frame_size, thumbnail, referenceImage });
+
+        const frames = [{
+            frameUrl, textCoordinates: textCoordinates, coordinates, frame_size,
+        }]
+
+
+        const frame = await RandImg.create({ frames, description, thumbnail, referenceImage, category: "random image", user: req.user.id });
         res.send(frame);
     } catch (error) {
         console.error(error);
@@ -55,14 +65,31 @@ router.post("/upload-frame", auth, adminRole, cpUpload1, async (req, res) => {
 });
 
 
+// router.get('/get-all', async (req, res) => {
+
+//     const lang = req.query.lang;
+
+//     try {
+
+//         const ress = RandImg.find({ language: lang }).populate('user', 'comments.user');
+//         res.send(ress);
+
+//     } catch (error) {
+//         res.status(500).send({ success: false, error: error.message });
+//     }
+// });
+
+
 const cpUpload = uploadFile.fields([{ name: 'image', maxCount: 10 }]);
 
-router.post("/upload-images", auth, cpUpload, async (req, res) => {
+router.post("/random-image/generate-image", auth, cpUpload, async (req, res) => {
 
     try {
-        const { id } = req.body;
+        const { id, name } = req.body;
 
-        const frame = await RandImg.findById(id);
+        const rees = await RandImg.findById(id);
+
+        const frame = rees.frames[0];
 
         const ll = req.files['image'].map(async (file, i) => {
             try {
@@ -82,6 +109,9 @@ router.post("/upload-images", auth, cpUpload, async (req, res) => {
         await Promise.all(ll);
 
         res.send({ message: "Images processed successfully" });
+
+        res.send()
+
     } catch (error) {
         console.error("Error in image processing:", error);
         res.status(500).json({ error: true, message: "Internal server error" });
@@ -104,15 +134,6 @@ router.get('/get-frame', async (req, res) => {
 });
 
 
-router.get('/get-all', async (req, res) => {
-    try {
-        const frames = await RandImg.find().populate('comments.user');
-        res.send(frames);
-    } catch (error) {
-
-        res.status(500).send(error.message);
-    }
-});
 
 
 router.get('/:id', async (req, res) => {

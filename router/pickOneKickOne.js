@@ -6,39 +6,57 @@ const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase'
 const adminRole = require('../middelware/checkRole');
 
 
+const cpUplad = uploadFile.fields([{
+    name: 'option', maxCount: 50
+},
+{
+    name: 'question', maxCount: 30
+},
+{
+    name: 'referencesImage', maxCount: 1
+}])
 
+router.post('/add-question', auth, adminRole, cpUplad, async (req, res) => {
 
-router.post('/add-question', auth, adminRole, uploadFile.single('question'), async (req, res) => {
+    let { questions, language, description } = req.body;
 
-    let { option1, point1, option2, point2, option1DifLang, option2DifLang } = req.body;
-    let question;
-
-    if (option1DifLang) {
-        option1DifLang = JSON.parse(option1DifLang)
-    }
-    if (option2DifLang) {
-        option2DifLang = JSON.parse(option2DifLang)
-    }
-
-    if (req.file) {
-        question = await uploadAndGetFirebaseUrl(req);
-
-
-    } else {
-        question = req.body.question;
+    if (questions) {
+        questions = JSON.parse(questions)
     }
 
-    const options = [{ option: option1, point: point1 }, { option: option2, point: point2 }];
-    console.log(options, question)
+    let i = 0;
+    let j = 0;
+
+    for (let k = 0; k < questions.length; k++) {
+        const question = questions[k];
+
+        if (question.questionType === 'image') {
+            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        }
+
+        if (question.optionType === 'image') {
+            // Sequentially process options
+            for (let n = 0; n < question.options.length; n++) {
+                const option = question.options[n];
+                questions[k]["options"][n].option = await uploadAndGetFirebaseUrl(req.files["option"][j++]);
+            }
+        }
+    }
+
+
+    // const  = [{ option: option1, point: point1 }, { option: option2, point: point2 }];
+    console.log(questions)
 
     try {
+        console.log(req.files["referencesImage"])
+        let referencesImage = await uploadAndGetFirebaseUrl(req.files['referencesImage'][0])
 
-        const result = await pickAndKick.create({ question, options, option1DifLang, option2DifLang });
+        const result = await pickAndKick.create({ questions, referenceImage: referencesImage, language, description, user: req.user.id });
 
         res.json(result);
 
     } catch (error) {
-
+        console.log(error)
         res.status(500).json({ error: error.message });
 
     }
@@ -48,19 +66,7 @@ router.get('/get-by-id/:id', async (req, res) => {
     let lang = req.query.lang
     try {
         const pick = await pickAndKick.findById(req.params.id);
-        if (lang && lang.toLowerCase() !== "english") {
 
-            const option1 = await pick.option1DifLang.find(tit => tit.lang === lang);
-            const option2 = await pick.option2DifLang.find(tit => tit.lang === lang);
-
-
-            if (option2 && option1) {
-
-                pick.options[0]['option'] = option1.text.toLowerCase();
-                pick.options[1]['option'] = option2.text.toLowerCase();
-
-            }
-        }
 
         res.send(pick);
     } catch (error) {
@@ -73,28 +79,11 @@ router.get('/get-by-id/:id', async (req, res) => {
 router.get('/get-all', async (req, res) => {
     try {
         let lang = req.query.lang
-        const pick = await pickAndKick.find();
+        const pick = await pickAndKick.find({ language: lang }).populate('user', 'comments.user');
 
-        if (lang && lang.toLowerCase() !== "english") {
-            let result = await pick.filter(p => {
-                const option1 = p.option1DifLang.find(tit => { tit.lang === lang });
-                const option2 = p.option2DifLang.find(tit => { tit.lang === lang });
+        res.send(pick);
 
-                if (option2 && option1) {
 
-                    p.options[0]['option'] = option1.text;
-                    p.options[1]['option'] = option2.text;
-                    return p;
-                } else {
-                    return false;
-                }
-            });
-
-            res.json(result);
-        } else {
-
-            res.json(pick);
-        }
 
     } catch (error) {
 

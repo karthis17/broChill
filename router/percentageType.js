@@ -1,4 +1,4 @@
-const Percentage = require('../model/percentageType.model');
+const Percentage = require('../model/funtest.model');
 const router = require('express').Router();
 const auth = require('../middelware/auth');
 const multer = require('multer');
@@ -65,20 +65,18 @@ router.post("/add-frame", auth, adminRole, cpUpload, async (req, res) => {
 
     let range = req.body.range;
 
+    let type = req.body.type;
+
     if (range) {
         range = JSON.stringify(range)
     }
 
     try {
         console.log(req.body);
-        let { question, frames, questionDifLang } = req.body;
+        let { question, frames, description } = req.body;
 
         if (frames) {
             frames = JSON.parse(frames);
-        }
-
-        if (questionDifLang) {
-            questionDifLang = JSON.parse(questionDifLang);
         }
 
         if (!req.files || !req.files['frame']) {
@@ -105,7 +103,8 @@ router.post("/add-frame", auth, adminRole, cpUpload, async (req, res) => {
 
         await Promise.all(framePromises);
 
-        const ress = await Percentage.create({ question, questionDifLang, frames, thumbnail, range });
+        const ress = await Percentage.create({ question, frames, range, description: "asfdgh", thumbnail, category: "single percentage", user: req.user.id });
+        console.log(ress);
         res.send(ress);
     } catch (error) {
         console.error(error);
@@ -115,34 +114,34 @@ router.post("/add-frame", auth, adminRole, cpUpload, async (req, res) => {
 });
 
 
-router.get('/get-all', async (req, res) => {
-    try {
-        const lang = req.query.lang;
+// router.get('/get-all', async (req, res) => {
+//     try {
+//         const lang = req.query.lang;
 
-        const result = await Percentage.find().populate('comments.user');
-        if (lang && lang.toLowerCase() !== "english") {
-            let ress = await result.filter(p => {
-                const question = p.questionDifLang.find(tit => tit.lang === lang);
+//         const result = await Percentage.find().populate('comments.user');
+//         if (lang && lang.toLowerCase() !== "english") {
+//             let ress = await result.filter(p => {
+//                 const question = p.questionDifLang.find(tit => tit.lang === lang);
 
-                if (question) {
+//                 if (question) {
 
-                    p.question = question.text;
-                    return p;
-                } else {
-                    return false;
-                }
-            });
+//                     p.question = question.text;
+//                     return p;
+//                 } else {
+//                     return false;
+//                 }
+//             });
 
-            res.json(ress);
-        } else {
+//             res.json(ress);
+//         } else {
 
-            res.json(result);
-        }
-    } catch (error) {
+//             res.json(result);
+//         }
+//     } catch (error) {
 
-        res.status(500).send(error.message);
-    }
-});
+//         res.status(500).send(error.message);
+//     }
+// });
 
 
 
@@ -241,6 +240,29 @@ router.get('/genarate/:id', async (req, res) => {
     }
 
 });
+
+router.get('/percentage-range/:id', async (req, res) => {
+    try {
+        const re = await Percentage.findById(req.params.id);
+
+        const randomNumber = Math.floor(Math.random() * 100 + 1);
+
+        const number = re.range.find(r => r.maxRange >= randomNumber && r.minRange <= randomNumber);
+
+        const baseImage = await re.frame[0].frameUrl;
+        const coord = await re.frame[0].coordinates;
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id + await frame._id}.png`);
+
+
+        // await the result of applyMask
+        let ress = await applyMask(baseImage, outputPath, number.value, coord);
+
+
+        res.send({ _id: req.params.id, result: ress });
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+})
 
 
 router.post('/share', async (req, res) => {

@@ -2,143 +2,83 @@ const router = require('express').Router();
 const Quizzes = require('../model/quizzes.model');
 const auth = require('../middelware/auth');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
-
 const adminRole = require('../middelware/checkRole');
+const Jimp = require('jimp');
 
+
+// const multer = require('multer');
+const path = require('path');
+
+
+// const storage = multer.diskStorage({
+//     destination: './uploads/', // Specify the upload directory
+//     filename: function (req, file, callback) {
+//         callback(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+//     }
+// });
+
+// const upload = multer({
+//     storage: storage,
+//     limits: {
+//         fileSize: 50 * 1024 * 1024, // 50 MB (adjust as needed)
+//         files: 5 // Maximum number of files allowed (adjust as needed)
+//     }
+// });
 
 const cpUpload = uploadFile.fields([
-    { name: 'question', maxCount: 1 },
-    { name: 'state1', maxCount: 5 },
-    { name: 'state2', maxCount: 5 },
-    { name: 'state3', maxCount: 5 },
-    { name: 'answer', maxCount: 5 }
-]);
-
-router.post('/upload', auth, adminRole, cpUpload, (req, res) => {
-
-    res.json(req.files)
-
-});
-
-router.post('/add-quizze', auth, adminRole, async (req, res) => {
-    const bodyData = req.body;
-
-    let statement_1 = [];
-    let statement_2 = [];
-    let statement_3 = [];
-    let results = [];
-
-
-    const question = await uploadAndGetFirebaseUrl(bodyData.question);
-    let promiseImgs1 = []
-    let promiseImgs2 = []
-    let promiseImgs3 = []
-    let promiseImgsResult = []
-
-
-
-    for (let i = 0; i < bodyData.state1.length; i++) {
-        statement_1.push({
-            point: bodyData.state1[i].point,
-        });
-        promiseImgs1.push(uploadAndGetFirebaseUrl(bodyData.state1[i].option))
-        statement_2.push({
-            point: bodyData.state2[i].point,
-        });
-        promiseImgs2.push(uploadAndGetFirebaseUrl(bodyData.state2[i].option))
-        statement_3.push({
-            point: bodyData.state3[i].point,
-        });
-        promiseImgs3.push(uploadAndGetFirebaseUrl(bodyData.state3[i].option))
-        results.push({
-            minScore: bodyData.result[i].minScore,
-            maxScore: bodyData.result[i].maxScore,
-        });
-        promiseImgsResult.push(uploadAndGetFirebaseUrl(bodyData.result[i].resultImg))
-
-    }
-    promiseImgs1 = await Promise.all(promiseImgs1);
-    promiseImgs2 = await Promise.all(promiseImgs2);
-    promiseImgs3 = await Promise.all(promiseImgs3);
-    promiseImgsResult = await Promise.all(promiseImgsResult);
-    for (let i = 0; i < bodyData.state1.length; i++) {
-        statement_1[i].option = promiseImgs1[i]
-        statement_2[i].option = promiseImgs2[i]
-        statement_3[i].option = promiseImgs3[i]
-        results[i].scoreBoard = promiseImgsResult[i]
-    }
-
-    console.log(statement_1, statement_2, statement_3, results);
-
-    try {
-        const response = await Quizzes.create({ questionImage: question, statement_1, statement_2, statement_3, results });
-        res.json(response);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json(error.message);
-    }
-
-});
-
-const cpUpload1 = uploadFile.fields([
-    { name: 'question', maxCount: 1 },
-
-    { name: 'answer', maxCount: 5 }
+    { name: 'question', maxCount: 20 },
+    { name: 'option', maxCount: 50 },
+    { name: 'answer', maxCount: 20 },
+    { name: 'referencesImage', maxCount: 2 }
 ]);
 
 
-router.post("/add-text-quizzes", auth, adminRole, cpUpload1, async (req, res) => {
+router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
-    let { statement_1, statement_2, statement_3, result } = req.body;
+    let { questions, results, description, language } = req.body;
 
     console.log(req.body)
 
-    statement_1 = JSON.parse(statement_1);
-    statement_2 = JSON.parse(statement_2);
-    statement_3 = JSON.parse(statement_3);
-    let results = JSON.parse(result);
+    questions = JSON.parse(questions)
+    results = JSON.parse(results)
 
-    if (!statement_1 || !statement_2 || !statement_3) {
-        res.status(404).json({ message: "Please provide a data" });
+
+    let i = 0;
+    let j = 0;
+
+    for (let k = 0; k < questions.length; k++) {
+        const question = questions[k];
+
+        if (question.questionType === 'image') {
+            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        }
+
+        if (question.optionType === 'image') {
+            // Sequentially process options
+            for (let n = 0; n < question.options.length; n++) {
+                const option = question.options[n];
+                questions[k]["options"][n].option = await uploadAndGetFirebaseUrl(req.files["option"][j++]);
+            }
+        }
     }
 
-    let promiseImgsResult = [];
-
-    if (!req.files["answer"]) {
-        res.status(404).json({ message: "Please provide a answer data" });
+    // Sequentially process results
+    for (let m = 0; m < results.length; m++) {
+        results[m].resultImg = await uploadAndGetFirebaseUrl(req.files["answer"][m]);
     }
 
-    req.files["answer"].map((file, i) => {
-        promiseImgsResult.push(uploadAndGetFirebaseUrl(file));
-    })
+    let referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
 
-    let question;
-
-    if (req.files["question"]) {
-        question = await uploadAndGetFirebaseUrl(req.files["question"][0]);
-    } else {
-        question = req.body.question;
-    }
-
-    promiseImgsResult = await Promise.all(promiseImgsResult);
-
-    results = results.map((result, i) => {
-
-        result["scoreBoard"] = promiseImgsResult[i];
-
-        return result;
-
-    });
 
     try {
-        const quizess = await Quizzes.create({ questionImage: question, results, statement_1, statement_2, statement_3 });
-        res.send({ success: true, data: quizess });
-
+        const qu = await Quizzes.create({ questions, results, description, referenceImage: referencesImage, language, user: req.user.id });
+        res.send(qu);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).send({ message: error.message });
     }
+
 });
+
 
 router.get('/get-all-quizzes', async (req, res) => {
     try {
@@ -165,15 +105,84 @@ router.get('/get-quizze/:id', async (req, res) => {
     }
 });
 
+const cpUplad = uploadFile.fields([
+    { name: 'image', maxCount: 5 }
+]);
 
-router.post('/get-result', auth, async (req, res) => {
-    const { score, quizze_id } = req.body;
+router.post('/get-result', cpUplad, async (req, res) => {
+    let { score, quizze_id, userText } = req.body;
 
     try {
-        const response = await Quizzes.findByIdAndUpdate(quizze_id, { $push: { players: { user: req.user.id, score: score } } });
+
+        const response = await Quizzes.findById(quizze_id);
 
         const result1 = await response.results.find(result => result.minScore <= score && result.maxScore >= score);
-        console.log(response, result1);
+
+        const baseImage = result1.resultImg;
+        const squareCoord = result1.coordinates;
+        let Images = [];
+        if (squareCoord.length > 0) {
+            // Upload images in parallel
+            await Promise.all(squareCoord.map(async (corr, i) => {
+                Images.push(await uploadAndGetFirebaseUrl(req.files['image'][i]));
+            }));
+
+            // Assign URLs to squareCoord objects
+            await Promise.all(squareCoord.map(async (sq, i) => {
+                squareCoord[i]["path"] = await Images[i];
+            }));
+        }
+        const scoreCoord = result1.scorePosition;
+
+
+
+        // let resText = [];
+        // let i = 0
+        // let j = 0
+
+        // for (let test of textCoord) {
+        //     if (test.noOfName.length > 0) {
+        //         test.noOfName.forEach((t) => {
+        //             if (!resText[j]) {
+        //                 resText[j] = test.text.replace(t, userText[i++]);
+        //             } else {
+        //                 resText[j] = resText[j].replace(t, userText[i++]);
+        //             }
+        //         });
+        //         j++;
+        //     } else {
+
+        //         resText.push(test.text);
+        //     }
+        // }
+
+        // const texts = textCoord.map((text, i) => {
+        //     return {
+        //         text: resText[i],
+        //         width: text.width,
+        //         height: text.height,
+        //         x: text.x,
+        //         y: text.y
+        //     };
+        // });
+
+        // scoreCoord["text"] = score;
+        // texts.push(scoreCoord);
+
+        const outputPath = path.join(__dirname, `../uploads/askhdjks.png`);
+
+
+        await applyMask(baseImage, squareCoord, outputPath, `${score}`, scoreCoord, result1.frame_size.width, result1.frame_size.height)
+
+
+        // text.forEach(element => {
+        //     let te = element.split(' ');
+        //     te.forEach(line => {
+        //         line.includes('<fanme')
+        //     })
+        // });
+
+        // console.log(response, result1);
 
         res.json(result1);
     } catch (error) {
@@ -192,6 +201,58 @@ router.delete("/delete/:id", auth, adminRole, async (req, res) => {
     }
 
 });
+
+
+async function applyMask(baseImagePath, maskImages, outputPath, texts, scoreCoord, baseW, baseH) {
+    try {
+        const baseImage = await Jimp.read(baseImagePath);
+        console.log(texts, "sad");
+
+        console.log(baseImagePath, maskImages, outputPath);
+
+        baseImage.resize(+baseW, +baseH);
+        for (let i = 0; i < maskImages.length; i++) {
+            const { path, x, y, width, height } = maskImages[i];
+            console.log(path, x, y, width, height);
+            const maskImage = await Jimp.read(path);
+
+            console.log(maskImage)
+            maskImage.resize(+width, +height);
+            baseImage.composite(maskImage, +x, +y, {
+                mode: Jimp.BLEND_DESTINATION_OVER
+            });
+        }
+
+
+
+        const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK); // Load black font
+        const { x, y, width, height } = scoreCoord;
+        let text = texts;
+
+        // Calculate the center coordinates within the specified region
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+
+        // Measure text width and height
+        const textWidth = Jimp.measureText(font, text);
+        const textHeight = Jimp.measureTextHeight(font, text);
+
+        // Calculate the starting position of the text to achieve center alignment
+        const textX = centerX - textWidth / 2;
+        const textY = centerY - textHeight / 2;
+
+        // Print the text in the center of the region
+        baseImage.print(font, textX, textY, text);
+
+
+        await baseImage.writeAsync(outputPath);
+
+
+        console.log('Mask applied successfully.');
+    } catch (error) {
+        console.error('An error occurred:', error);
+    }
+}
 
 
 module.exports = router;

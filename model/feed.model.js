@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 module.exports = mongoose.model("feed", {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     description: { type: String, required: true },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
     title: { type: String, required: true },

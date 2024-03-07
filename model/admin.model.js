@@ -13,6 +13,7 @@ module.exports = mongoose.model("Admin", {
         type: String,
         required: true
     },
+    avatar: String,
     createdAt: {
         type: Date,
         default: Date.now()

@@ -5,6 +5,7 @@ const bgFrame = mongoose.model('friendLoveCalcBgImg', {
 })
 
 const loveCalc = mongoose.model('loveCalc', {
+
     minPercentage: { type: Number, required: true },
     maxPercentage: { type: Number, required: true },
     resultImage: { type: String, required: true },

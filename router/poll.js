@@ -4,67 +4,42 @@ const Poll = require('../model/poll.model');
 const auth = require('../middelware/auth');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
-async function getVotesForOptions(pollId) {
-    try {
-        const poll = await Poll.findById(pollId);
+// async function getVotesForOptions(pollId) {
+//     try {
+//         const poll = await Poll.findById(pollId);
 
-        if (!poll) {
-            throw new Error('Poll not found');
-        }
+//         if (!poll) {
+//             throw new Error('Poll not found');
+//         }
 
-        const votes = poll.votes || [];
+//         const votes = poll.votes || [];
 
-        const votesByOption = {};
-        const totalVotes = votes.length;
+//         const votesByOption = {};
+//         const totalVotes = votes.length;
 
-        votes.forEach(({ votedOption }) => {
-            votesByOption[votedOption] = (votesByOption[votedOption] || 0) + 1;
-        });
+//         votes.forEach(({ votedOption }) => {
+//             votesByOption[votedOption] = (votesByOption[votedOption] || 0) + 1;
+//         });
 
-        const percentagesByOption = [];
-        for (const option in votesByOption) {
-            percentagesByOption.push({ option: +option, percentage: (votesByOption[option] / totalVotes) * 100 })
+//         const percentagesByOption = [];
+//         for (const option in votesByOption) {
+//             percentagesByOption.push({ option: +option, percentage: (votesByOption[option] / totalVotes) * 100 })
 
-        }
+//         }
 
-        return percentagesByOption;
-    } catch (error) {
-        console.error('Error retrieving votes:', error);
-        throw error;
-    }
-}
+//         return percentagesByOption;
+//     } catch (error) {
+//         console.error('Error retrieving votes:', error);
+//         throw error;
+//     }
+// }
 
 router.get('/get-poll/:id', async (req, res) => {
 
     try {
-        const poll = await Poll.findById(req.params.id).populate('comments.user');
-        let votes = await getVotesForOptions(req.params.id)
+        const poll = await Poll.findById(req.params.id).populate('user', 'comments.user');
 
-        votes.map(vote => { })
-
-        const lang = req.query.lang ? req.query.lang : "english";
-
-        if (lang) {
-            const question = poll.questionDifLang.find(tit => tit.lang === lang);
-            const option = poll.optionDifLang.find(tit => tit.lang === lang);
-
-            poll.question = question ? question.text : poll.question;
-
-            if (option) {
-                poll.option = option.data;
-            }
-
-            res.send({
-                poll, votes
-            });
-        } else {
-
-            res.send({
-
-
-                poll, votes
-            });
-        }
+        res.send(poll)
 
     } catch (error) {
 
@@ -77,29 +52,11 @@ router.get('/getAll', async (req, res) => {
     try {
         const lang = req.query.lang ? req.query.lang : "english";
 
-        const poll = await Poll.find().populate('comments.user');
+        const poll = await Poll.find({ language: lang }).populate('user', 'comments.user');
 
-        if (lang) {
-            let result = await poll.filter(p => {
-                const question = p.questionDifLang.find(tit => tit.lang === lang);
-                const answer = p.optionDifLang.find(tit => tit.lang === lang);
 
-                p.question = question ? question.text : p.question;
+        res.json(poll);
 
-                if (answer && question) {
-
-                    p.option = answer.data;
-                    return p;
-                }
-                else
-                    return null;
-            });
-
-            res.json(result);
-        } else {
-
-            res.json(poll);
-        }
 
     } catch (error) {
 
@@ -108,52 +65,103 @@ router.get('/getAll', async (req, res) => {
 });
 
 
-
-router.post('/vote', auth, async (req, res) => {
+router.post('/:pollId/vote', auth, async (req, res) => {
+    const pollId = req.params.pollId;
+    const { optionId } = req.body;
 
     try {
-        const poll = await Poll.findOneAndUpdate(
-            { _id: req.body.pollId },
-            { $push: { votes: { votedOption: req.body.option, user: req.user.id } } },
-            { new: true }
-        );
-
-        console.log(req.body);
+        // Find the poll by ID
+        const poll = await Poll.findById(pollId);
         if (!poll) {
-            return res.status(404).json({ error: 'Poll not found' });
+            return res.status(404).json({ error: "Poll not found" });
         }
 
-        res.status(200).json({ message: 'Vote added successfully', poll });
-    } catch (error) {
-        console.error('Error adding vote:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+        // Check if the option exists in the poll
+        const option = poll.options.find(opt => opt._id == optionId);
+        if (!option) {
+            return res.status(404).json({ error: "Option not found in the poll" });
+        }
 
+        option.votedUsers.push(req.user.id);
+
+        // Update the vote count for the selected option
+        option.vote = option.vote ? parseInt(option.vote) + 1 : 1;
+
+        // Increment the total votes for the poll
+        poll.totalVotes = poll.totalVotes + 1;
+
+        // Calculate the percentage of votes for each option
+        poll.options.forEach(opt => {
+            opt.percentage = ((opt.vote || 0) / poll.totalVotes) * 100;
+        });
+
+        // Save the updated poll
+        await poll.save();
+
+        res.status(200).json({ message: "Vote recorded successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
+
+
+// router.post('/vote', auth, async (req, res) => {
+
+//     try {
+//         const poll = await Poll.findOneAndUpdate(
+//             { _id: req.body.pollId },
+//             { $push: { votes: { votedOption: req.body.option, user: req.user.id } } },
+//             { new: true }
+//         );
+
+//         console.log(req.body);
+//         if (!poll) {
+//             return res.status(404).json({ error: 'Poll not found' });
+//         }
+
+//         res.status(200).json({ message: 'Vote added successfully', poll });
+//     } catch (error) {
+//         console.error('Error adding vote:', error);
+//         res.status(500).json({ error: 'Internal server error' });
+//     }
+
+// });
 
 const cpUpload1 = uploadFile.fields([
     { name: 'question', maxCount: 1 },
     { name: 'thumbnail', maxCount: 1 },
+    { name: 'option', maxCount: 10 }
 ]);
 
 
-router.post('/add-text-poll', auth, adminRole, cpUpload1, async (req, res) => {
-    let { question, questionDifLang, optionDifLang } = req.body;
+router.post('/add-poll', auth, adminRole, cpUpload1, async (req, res) => {
+    let { question, options, description, language, questionType, optionType } = req.body;
     console.log(req.body, req.file)
 
     let qn;
-
-    if (questionDifLang) {
-        questionDifLang = JSON.parse(questionDifLang);
-    }
-    if (optionDifLang) {
-        optionDifLang = JSON.parse(optionDifLang);
-    }
     if (req.files['question']) {
         qn = await uploadAndGetFirebaseUrl(req.files['question'][0]);
     } else {
         qn = question;
     }
+
+
+    let optionsArray = [];
+
+    if (optionType === 'image') {
+        const promiseImgs = []
+        await Promise.all(req.files['option'].map(async (option) => {
+            console.log(option);
+            promiseImgs.push({ option: await uploadAndGetFirebaseUrl(option) });
+        }));
+        optionsArray = await Promise.all(promiseImgs);
+
+    } else {
+        optionsArray = JSON.parse(options);
+    }
+
+    console.log(optionsArray)
 
     if (!req.files["thumbnail"]) {
         return res.status(404).send({ message: "No file found" });
@@ -164,7 +172,7 @@ router.post('/add-text-poll', auth, adminRole, cpUpload1, async (req, res) => {
 
 
     try {
-        const poll = await Poll.create({ question: qn, option: [], questionDifLang, optionDifLang, thumbnail });
+        const poll = await Poll.create({ question: qn, options: optionsArray, thumbnail, description, language, user: req.user.id, questionType, optionType });
 
         res.status(201).json({ message: 'Poll created successfully', poll });
     } catch (error) {
@@ -177,16 +185,11 @@ router.post('/add-text-poll', auth, adminRole, cpUpload1, async (req, res) => {
 
 
 
-const cpUpload = uploadFile.fields([{ name: 'question', maxCount: 1 }, { name: 'options', maxCount: 10 }]);
+const cpUpload = uploadFile.fields([{ name: 'question', maxCount: 1 },]);
 
 router.post('/add-img-poll', auth, adminRole, cpUpload, async (req, res) => {
-    const { question, questionDifLang } = req.body;
+    const { question, options, description, language, questionType, optionType } = req.body;
 
-    console.log(questionDifLang);
-
-    if (questionDifLang) {
-        questionDifLang = JSON.parse(questionDifLang);
-    }
 
     const promiseImgs = []
     req.files['options'].forEach((option) => {
@@ -206,7 +209,7 @@ router.post('/add-img-poll', auth, adminRole, cpUpload, async (req, res) => {
 
 
     try {
-        const poll = await Poll.create({ question: qn, option: optionsArray, questionDifLang });
+        const poll = await Poll.create({ question: qn, options, description, language, questionType, optionType });
 
         res.status(201).json({ message: 'Poll created successfully', poll });
     } catch (error) {

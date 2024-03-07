@@ -1,30 +1,57 @@
 const mongoose = require('mongoose');
 
 module.exports = mongoose.model("quizzes", {
-    questionImage: { type: String, required: true },
-    statement_1: [{
-        option: { type: String, required: true },
-        point: { type: String, required: true },
-    }],
-    statement_2: [{
-        option: { type: String, required: true },
-        point: { type: String, required: true },
+
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+
+    language: { type: String, required: true },
+
+    questions: [{
+
+        question: { type: String, required: true },
+        questionType: { type: String, required: true },
+        optionType: String,
+        options: [{
+            option: { type: String, required: true },
+            points: { type: Number, required: true },
+        }]
 
     }],
-    statement_3: [{
-        option: { type: String, required: true },
-        point: { type: String, required: true },
 
-    }],
+    category: String,
+    subCategory: String,
+
     results: [{
-        scoreBoard: { type: String, required: true },
         maxScore: { type: Number, required: true },
         minScore: { type: Number, required: true },
+        resultImg: { type: String, required: true },
+        frame_size: {
+            width: { type: Number },
+            height: { type: Number },
+        },
+        coordinates: [],
+        scorePosition: {
+            x: Number,
+            y: Number,
+            width: Number,
+            height: Number,
+        },
+        noOfTexts: [],
     }],
-    players: [{
+
+    referenceImage: { type: String },
+
+    description: { type: String, required: true },
+
+    likes: [{
+        type: mongoose.Schema.Types.ObjectId, ref: 'User'
+    }],
+    comments: [{
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-        score: { type: Number, required: true },
-        createdAt: { type: Date, default: Date.now },
+        text: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now }
     }],
+    shares: { type: Number, default: 0 },
+
     createdAt: { type: Date, default: Date.now }
 });

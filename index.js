@@ -17,14 +17,15 @@ const riddleRouter = require("./router/riddles");
 const feedRouter = require("./router/feed");
 const generalRouter = require("./router/general-qiestion");
 const reelRouter = require("./router/reel");
-const percentageTypeRouter = require("./router/percentageType");
-const RandImgRouter = require("./router/randomImage");
-const RandtxtRouter = require("./router/randomText");
+// const percentageTypeRouter = require("./router/percentageType");
+// const RandImgRouter = require("./router/randomImage");
+const funtestRouter = require("./router/funtest");
 const menuRouter = require("./router/menu");
 const calc = require("./router/friendship-love- calculator");
 const cors = require("cors");
 const path = require("path");
 const bodyParser = require("body-parser");
+const nameingRouter = require("./router/naming");
 
 
 const app = express();
@@ -33,8 +34,8 @@ const port = 3000;
 app.use(cors())
 
 app.use(express.json());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: '1gb' }));
+app.use(bodyParser.urlencoded({ limit: '1gb', extended: true }));
 
 app.get('/', (req, res) => {
     res.send("hello world");
@@ -59,9 +60,10 @@ app.use("/api/feeds", feedRouter);
 app.use("/api/menu", menuRouter);
 app.use("/api/pick-and-kick", pickRouter);
 app.use("/api/love-friendship-calc", calc);
-app.use('/api/random-image', RandImgRouter);
-app.use('/api/random-text', RandtxtRouter);
-app.use('/api/percentage-type', percentageTypeRouter);
+// app.use('/api/random-image', RandImgRouter);
+app.use('/api/funtest', funtestRouter);
+app.use('/api/nameing', nameingRouter);
+// app.use('/api/percentage-type', percentageTypeRouter);
 
 mongoose.connect(process.env.MONG_URL).then(() => {
     app.listen(port, () => {
