@@ -1,14 +1,13 @@
-const auth = require('../middelware/auth');
 const router = require('express').Router();
-const path = require('path');
-const guess = require('../model/guessGame.model');
-const deleteImage = require('../commonFunc/delete.image');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const contest = require("../model/contest.model")
+const auth = require('../middelware/auth');
 const adminRole = require('../middelware/checkRole');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 const Jimp = require('jimp');
 
 
 // const multer = require('multer');
+const path = require('path');
 const Category = require('../model/categoryModel');
 
 
@@ -20,17 +19,13 @@ const cpUpload = uploadFile.fields([
 ]);
 
 
-router.post('/add-question', auth, adminRole, cpUpload, async (req, res) => {
+router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
     let { questions, results, description, language, resultImage } = req.body;
 
     console.log(req.body)
 
-    if (questions) {
-
-        questions = JSON.parse(questions)
-        console.log(questions)
-    }
+    questions = JSON.parse(questions);
 
     if (results) {
 
@@ -64,17 +59,16 @@ router.post('/add-question', auth, adminRole, cpUpload, async (req, res) => {
         }
 
     }
-
     let referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
 
 
     try {
-        const qu = await guess.create({ questions, results, description, referenceImage: referencesImage, language, resultImage, user: req.user.id });
+        const qu = await contest.create({ questions, results, description, referenceImage: referencesImage, language, user: req.user.id });
         const category = await Category.findById(qu.language);
         if (!category) {
             return res.status(404).send({ success: false, error: 'Language not found' });
         }
-        category.data.guessGame.push(qu._id);
+        category.data.fanQuizzes.push(qu._id);
         const savedCategory = await category.save();
 
 
@@ -93,7 +87,7 @@ router.get('/get-all', async (req, res) => {
 
     let lang = req.query.lang;
     try {
-        const fanquizzes = await guess.find({ language: lang }).populate({
+        const fanquizzes = await contest.find({ language: lang }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -118,7 +112,7 @@ router.get('/get-fanquizze/:id', async (req, res) => {
     }
 
     try {
-        const fanquizze = await guess.findById(req.params.id);
+        const fanquizze = await Quizzes.findById(req.params.id);
         res.json(fanquizze);
     } catch (error) {
         res.status(500).json(error.message);
@@ -369,96 +363,3 @@ router.put('/update', auth, adminRole, async (req, res) => {
 });
 
 module.exports = router;
-
-
-router.delete("/delete/:id", auth, adminRole, async (req, res) => {
-
-    try {
-        const ress = await guess.findById(req.params.id);
-
-        if (ress.questionType === "image") {
-            deleteImage(path.join(__dirname, `../${ress.imagePath}`));
-        }
-
-        if (ress.optionsType === "image") {
-            ress.options.forEach(option => {
-                deleteImage(path.join(__dirname, `../${option.imagePath}`));
-            });
-        }
-
-        await guess.deleteOne({ _id: req.params.id });
-        res.status(200).send({ message: "record deletd successfully." });
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-
-});
-
-// router.put("/update", auth, adminRole, async (req, res) => {
-
-//     let { id, imagePath, question, answer, options, questionType, optionsType } = req.params;
-
-
-//     if (req.files['question']) {
-
-//         question = `${req.protocol}://${req.get('host')}/${req.files['question'][0].filename}`
-//         imagePath = req.files['question'][0].path;
-//     } else {
-//         console.log(req.body)
-//         question = req.body.question;
-//     }
-
-//     if (!correctOption || !question) {
-//         return res.status(404).send({ err: "aee", question, correctOption });
-//     }
-
-
-//     if (req.files['options']) {
-
-//         req.files['options'].forEach(element => {
-//             if (element.originalname === correctOption) {
-//                 answer = element;
-//                 options.push({
-//                     option: `${req.protocol}://${req.get('host')}/${element.filename}`,
-//                     answer: true,
-//                     imagePath: element.path
-//                 });
-//             } else {
-//                 options.push({
-//                     option: `${req.protocol}://${req.get('host')}/${element.filename}`,
-//                     answer: false,
-//                     imagePath: element.path
-//                 });
-//             }
-//         });
-//     } else {
-//         req.body.options.forEach(item => {
-//             if (item === correctOption) {
-//                 answer = item;
-//                 options.push({
-//                     option: item,
-//                     answer: true,
-//                 });
-//             } else {
-//                 options.push({
-//                     option: item,
-//                     answer: false
-//                 });
-//             }
-//         })
-//     }
-
-//     if (!answer) {
-//         return res.status(404).send({ err: "awser is requried" });
-//     }
-
-//     try {
-//         const result = await guess.create({ question, options, questionType, optionsType, imagePath });
-//         res.json(result);
-//     } catch (error) {
-//         res.status(500).json(error);
-//     }
-// });
-
-
-// module.exports = router;

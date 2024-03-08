@@ -1,6 +1,7 @@
-const mongoose = require("mongoose");
+const { default: mongoose } = require("mongoose");
 
-module.exports = mongoose.model("generalQuestion", {
+module.exports = mongoose.model("contest", {
+
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
 
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
@@ -55,4 +56,5 @@ module.exports = mongoose.model("generalQuestion", {
     createdAt: { type: Date, default: Date.now }
 
 
-});
+
+})

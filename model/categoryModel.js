@@ -49,6 +49,14 @@ const categorySchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'pickKick' // Assuming you have a Mongoose model named 'Quiz' for quizzes
         }],
+        guessGame: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'guessGame' // Assuming you have a Mongoose model named 'Quiz' for quizzes
+        }],
+        gkQuestion: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'generalQuestion'
+        }]
         // Add more categories as needed
     }
 });

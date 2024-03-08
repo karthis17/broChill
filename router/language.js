@@ -10,6 +10,7 @@ const NameTest = require('../model/nameing.model');
 const Poll = require('../model/poll.model');
 const Frame = require('../model/frames.model');
 const PickKick = require('../model/pickOneKickOne.model');
+const Guessgame = require('../model/guessGame.model');
 
 // Route to get all distinct languages in the Category collection
 router.get('/', (req, res) => {
@@ -63,6 +64,9 @@ router.get('/data/:language', (req, res) => {
         .populate({
             path: 'data.pickOneKickOne',
             model: PickKick
+        }).populate({
+            path: 'data.guessGame',
+            model: Guessgame
         })
         // Add more population as needed
         .exec()
@@ -96,6 +100,7 @@ router.post('/add-language', (req, res) => {
             polls: [],
             frames: [],
             pickOneKickOne: [],
+            guessGame: []
         }
     });
 
