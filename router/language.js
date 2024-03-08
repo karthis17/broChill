@@ -11,6 +11,13 @@ const Poll = require('../model/poll.model');
 const Frame = require('../model/frames.model');
 const PickKick = require('../model/pickOneKickOne.model');
 const Guessgame = require('../model/guessGame.model');
+const generalQuestion = require('../model/general.model')
+const riddle = require('../model/riddles.model');
+const contest = require('../model/contest.model');
+
+
+
+
 
 // Route to get all distinct languages in the Category collection
 router.get('/', (req, res) => {
@@ -28,7 +35,7 @@ router.get('/', (req, res) => {
 router.get('/data/:language', (req, res) => {
     const language = req.params.language;
 
-    Category.findOne({ language: language })
+    Category.findOne({ _id: language })
         .populate({
             path: 'data.reels',
             model: Reel
@@ -73,6 +80,9 @@ router.get('/data/:language', (req, res) => {
         }).populate({
             path: 'data.riddles',
             model: riddle
+        }).populate({
+            path: 'data.ContestQuiz',
+            model: contest
         })
         // Add more population as needed
         .exec()
@@ -106,7 +116,10 @@ router.post('/add-language', (req, res) => {
             polls: [],
             frames: [],
             pickOneKickOne: [],
-            guessGame: []
+            guessGame: [],
+
+            gkQuestion: [],
+            riddle: []
         }
     });
 

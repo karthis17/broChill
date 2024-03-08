@@ -71,37 +71,36 @@ router.post("/add-riddle", auth, adminRole, cpUpload, async (req, res) => {
 });
 
 
+
 router.get('/get-all', async (req, res) => {
 
-    router.get('/get-all', async (req, res) => {
-
-        let lang = req.query.lang;
-        try {
-            const quizzes = await riddles.find({ language: lang }).populate({
+    let lang = req.query.lang;
+    try {
+        const quizzes = await riddles.find({ language: lang }).populate({
+            path: 'user',
+            select: '-password' // Exclude password and email fields from the 'user' document
+        }).populate({
+            path: 'comments',
+            populate: {
                 path: 'user',
-                select: '-password' // Exclude password and email fields from the 'user' document
-            }).populate({
-                path: 'comments',
-                populate: {
-                    path: 'user',
-                    select: '-password'
-                }
-            }).populate({
-                path: 'questions',
-                populate: {
-                    path: 'user',
-                    select: '-password'
-                }
-            });
-            console.log(quizzes);
-            res.json(quizzes);
-        } catch (error) {
-            res.status(500).json(error.message);
+                select: '-password'
+            }
+        }).populate({
+            path: 'questions',
+            populate: {
+                path: 'user',
+                select: '-password'
+            }
+        });
+        console.log(quizzes);
+        res.json(quizzes);
+    } catch (error) {
+        res.status(500).json(error.message);
 
-        }
-    });
-
+    }
 });
+
+
 
 
 // router.post('/get-by-id/:id', async (req, res) => {
@@ -165,7 +164,7 @@ router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await riddles.findByIdAndUpdate(req.body.riddle_id, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
+        const response = await riddles.findByIdAndUpdate(req.body.riddle_id, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true })
         res.status(200).json({
             message: "comment added successfully",
             data: response
@@ -186,6 +185,16 @@ router.delete('/delete/:id', auth, async (req, res) => {
 
     }
 
+});
+
+router.post('/share', async (req, res) => {
+    try {
+        const response = await riddles.findByIdAndUpdate(req.body.reelId, { $inc: { shares: 1 } }, { new: true })
+
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 router.put('/update', auth, adminRole, async (req, res) => {

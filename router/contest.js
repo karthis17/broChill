@@ -126,7 +126,7 @@ const cpUplad = uploadFile.fields([
 
 
 router.post('/get-result', cpUplad, async (req, res) => {
-    let { score, quizze_id, userText } = req.body;
+    let { score, quizze_id } = req.body;
 
     try {
 
@@ -254,14 +254,9 @@ router.post('/:postId/like', auth, async (req, res) => {
 });
 
 
-
-
-
 router.post('/share', async (req, res) => {
     try {
-        const response = await contest.findByIdAndUpdate(req.body.id, { $inc: { shares: 1 } })
-
-
+        const response = await contest.findByIdAndUpdate(req.body.id, { $inc: { shares: 1 } }, { new: true });
         res.json(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
@@ -270,15 +265,14 @@ router.post('/share', async (req, res) => {
 
 router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.id) res.status(404).json({ message: 'id is required' });
-
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await contest.findByIdAndUpdate(req.body.id, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
+        const response = await contest.findByIdAndUpdate(req.body.id, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true });
         res.status(200).json({
             message: "comment added successfully",
             data: response
-        })
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });

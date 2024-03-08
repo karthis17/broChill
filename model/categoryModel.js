@@ -60,6 +60,10 @@ const categorySchema = new mongoose.Schema({
         riddles: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'riddle'
+        }],
+        ContestQuiz: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'contest'
         }]
         // Add more categories as needed
     }

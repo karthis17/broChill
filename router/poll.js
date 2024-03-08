@@ -268,7 +268,7 @@ router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await Poll.findByIdAndUpdate(req.body.pollId, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
+        const response = await Poll.findByIdAndUpdate(req.body.pollId, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true })
         res.status(200).json({
             message: "comment added successfully",
             data: response
@@ -284,7 +284,7 @@ router.post('/share', async (req, res) => {
     if (!req.body.pollId) res.status(404).json({ message: 'Poll id is required' });
 
     try {
-        const response = await Poll.findByIdAndUpdate(req.body.pollId, { $inc: { shares: 1 } });
+        const response = await Poll.findByIdAndUpdate(req.body.pollId, { $inc: { shares: 1 } }, { new: true });
         res.status(200).json(response);
     } catch (error) {
         console.error(error);

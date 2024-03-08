@@ -8,20 +8,18 @@ const Category = require('../model/categoryModel');
 
 router.post('/upload-reel', auth, adminRole, uploadFile.single('reel'), async (req, res) => {
 
+    const { language, description, category, title } = req.body;
+
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
         const fileUrl = await uploadAndGetFirebaseUrl(req)
-        let { category, titleDifLang, descriptionDifLang, title, description } = req.body;
-        titleDifLang = JSON.parse(titleDifLang);
-        descriptionDifLang = JSON.parse(descriptionDifLang);
-        console.log(titleDifLang, descriptionDifLang)
 
         if (!description) {
             return res.status(400).json({ message: 'Description is required' });
         }
-        const reel = await reels.create({ category, titleDifLang, fileUrl, descriptionDifLang, user: req.user.id, title, description });
+        const reel = await reels.create({ category, title, fileUrl, user: req.user.id, language, description });
 
         const Language = await Category.findById(reel.language);
         if (!Language) {
@@ -173,7 +171,7 @@ router.post('/:postId/like', auth, async (req, res) => {
 
 router.post('/share', async (req, res) => {
     try {
-        const response = await reels.findByIdAndUpdate(req.body.reelId, { $inc: { shares: 1 } })
+        const response = await reels.findByIdAndUpdate(req.body.reelId, { $inc: { shares: 1 } }, { new: true })
 
         res.json(response);
     } catch (error) {
@@ -187,7 +185,7 @@ router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await reels.findByIdAndUpdate(req.body.reelId, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
+        const response = await reels.findByIdAndUpdate(req.body.reelId, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true })
         res.status(200).json({
             message: "comment added successfully",
             data: response

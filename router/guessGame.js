@@ -265,7 +265,7 @@ router.post('/:postId/like', auth, async (req, res) => {
 
 router.post('/share', async (req, res) => {
     try {
-        const response = await guess.findByIdAndUpdate(req.body.id, { $inc: { shares: 1 } })
+        const response = await guess.findByIdAndUpdate(req.body.id, { $inc: { shares: 1 } }, { new: true })
 
 
         res.json(response);
@@ -280,7 +280,7 @@ router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await guess.findByIdAndUpdate(req.body.id, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
+        const response = await guess.findByIdAndUpdate(req.body.id, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true })
         res.status(200).json({
             message: "comment added successfully",
             data: response
