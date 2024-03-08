@@ -3,7 +3,8 @@ const { default: mongoose } = require("mongoose");
 module.exports = mongoose.model('flames', {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     description: { type: String, required: true },
-    language: String,
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
+
     thumbnail: { type: String },
 
     imageUrl: { type: String, required: true },

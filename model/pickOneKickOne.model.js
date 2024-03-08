@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 module.exports = mongoose.model("pickKick", {
 
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
-    language: String,
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
+
     thumbnail: { type: String, required: true },
     description: { type: String, required: true },
 

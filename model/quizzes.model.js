@@ -4,7 +4,8 @@ module.exports = mongoose.model("quizzes", {
 
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
 
-    language: { type: String, required: true },
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
+
 
     questions: [{
 

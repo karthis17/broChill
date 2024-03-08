@@ -26,6 +26,7 @@ const cors = require("cors");
 const path = require("path");
 const bodyParser = require("body-parser");
 const nameingRouter = require("./router/naming");
+const lnagRouter = require("./router/language");
 
 
 const app = express();
@@ -63,6 +64,7 @@ app.use("/api/love-friendship-calc", calc);
 // app.use('/api/random-image', RandImgRouter);
 app.use('/api/funtest', funtestRouter);
 app.use('/api/nameing', nameingRouter);
+app.use('/api/language', lnagRouter);
 // app.use('/api/percentage-type', percentageTypeRouter);
 
 mongoose.connect(process.env.MONG_URL).then(() => {

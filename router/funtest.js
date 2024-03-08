@@ -6,6 +6,7 @@ const Jimp = require('jimp');
 const deleteImage = require('../commonFunc/delete.image');
 const adminRole = require('../middelware/checkRole');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const Category = require('../model/categoryModel');
 
 
 
@@ -69,6 +70,14 @@ router.post("/add-question", auth, adminRole, cpUpload1, async (req, res) => {
 
 
         const ress = await FunTest.create({ question, texts, description, language, frames, thumbnail, referenceImage, range, noOfUserImage, category: type, user: req.user.id });
+
+        const Language = await Category.findById(ress.language);
+        if (!Language) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.funTest.push(ress._id);
+        const savedCategory = await Language.save();
+
         res.send(ress);
     } catch (error) {
         console.error(error);

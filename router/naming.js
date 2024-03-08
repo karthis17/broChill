@@ -5,6 +5,7 @@ const adminRole = require('../middelware/checkRole');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 const path = require('path');
 const Jimp = require('jimp');
+const Category = require('../model/categoryModel');
 
 const cpUpload = uploadFile.fields([
     { name: 'frame', maxCount: 20 },
@@ -50,6 +51,15 @@ router.post('/add', auth, adminRole, cpUpload, async (req, res) => {
 
     try {
         const result = await Nameing.create({ description, language, frames, percentageTexts, facts, meanings, category: type, user: req.user.id, thumbnail });
+
+
+        const Language = await Category.findById(result.language);
+        if (!Language) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.nameTest.push(result._id);
+        const savedCategory = await Language.save();
+
         res.send(result)
     } catch (error) {
         res.status(500).send({ message: "Error creating image", error: error.message });

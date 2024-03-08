@@ -13,7 +13,8 @@ const pollSchema = new mongoose.Schema({
     description: { type: String, required: true },
     questionType: { type: String, required: true },
     optionType: { type: String, required: true },
-    language: String,
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
+
     options: [optionSchema],
     thumbnail: { type: String },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

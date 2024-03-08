@@ -3,8 +3,8 @@ const mongoose = require("mongoose");
 module.exports = mongoose.model("reel", {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
     title: { type: String, required: true },
-    description: { type: String, required: true },
-    titleDifLang: Array,
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
+
     descriptionDifLang: Array,
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
     fileUrl: { type: String, required: true },

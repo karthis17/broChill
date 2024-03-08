@@ -75,6 +75,7 @@ module.exports = mongoose.model('nameing', {
     }],
 
     category: { type: String, required: true },
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
 
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     description: { type: String },

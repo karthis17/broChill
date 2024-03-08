@@ -6,6 +6,7 @@ const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase'
 const adminRole = require('../middelware/checkRole');
 
 const mongoose = require('mongoose');
+const Category = require('../model/categoryModel');
 
 const cpUplad = uploadFile.fields([{
     name: 'option', maxCount: 50
@@ -53,6 +54,12 @@ router.post('/add-question', auth, adminRole, cpUplad, async (req, res) => {
         let referencesImage = await uploadAndGetFirebaseUrl(req.files['referencesImage'][0])
 
         const result = await pickAndKick.create({ questions, thumbnail: referencesImage, language, description, user: req.user.id });
+        const Language = await Category.findById(result.language);
+        if (!Language) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.pickOneKickOne.push(result._id);
+        const savedCategory = await Language.save();
 
         res.json(result);
 

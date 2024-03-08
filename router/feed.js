@@ -3,6 +3,7 @@ const router = require('express').Router();
 const auth = require('../middelware/auth');
 const adminRole = require('../middelware/checkRole');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const Category = require('../model/categoryModel');
 
 router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (req, res) => {
     console.log(req.body)
@@ -13,12 +14,9 @@ router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (r
         const fileUrl = await uploadAndGetFirebaseUrl(req)
         console.log(req.file)
 
-        let { description, category, title, titleDifLang, descriptionDifLang } = req.body;
+        let { description, category, title, language } = req.body;
 
-        titleDifLang = JSON.parse(titleDifLang);
-        descriptionDifLang = JSON.parse(descriptionDifLang);
 
-        console.log(titleDifLang, descriptionDifLang)
 
 
         if (!description) {
@@ -32,8 +30,15 @@ router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (r
 
         // const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
         // const imagePath = req.file.path;
-        const feed = await feeds.create({ category, title, imageUrl: fileUrl, description, user: req.user.id, titleDifLang, descriptionDifLang });
+        const feed = await feeds.create({ category, title, imageUrl: fileUrl, description, user: req.user.id, language });
         console.log(feed);
+        const Language = await Category.findById(feed.language);
+        if (!category) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.feeds.push(feed._id);
+        const savedCategory = await Language.save();
+
 
         res.status(201).json(feed);
     } catch (error) {

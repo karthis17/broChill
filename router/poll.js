@@ -3,6 +3,7 @@ const adminRole = require('../middelware/checkRole');
 const Poll = require('../model/poll.model');
 const auth = require('../middelware/auth');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const Category = require('../model/categoryModel');
 
 // async function getVotesForOptions(pollId) {
 //     try {
@@ -180,6 +181,13 @@ router.post('/add-poll', auth, adminRole, cpUpload1, async (req, res) => {
 
     try {
         const poll = await Poll.create({ question: qn, options: optionsArray, thumbnail, description, language, user: req.user.id, questionType, optionType });
+
+        const Language = await Category.findById(poll.language);
+        if (!Language) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.polls.push(poll._id);
+        const savedCategory = await Language.save();
 
         res.status(201).json({ message: 'Poll created successfully', poll });
     } catch (error) {

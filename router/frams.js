@@ -7,6 +7,7 @@ const router = require('express').Router();
 const adminRole = require('../middelware/checkRole');
 const deleteImage = require('../commonFunc/delete.image');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const Category = require('../model/categoryModel');
 
 
 const cpUpload1 = uploadFile.fields([
@@ -41,6 +42,16 @@ router.post('/upload-frame', auth, adminRole, cpUpload1, async (req, res) => {
         let referenceImage = await uploadAndGetFirebaseUrl(req.files['referenceImage'][0]);
 
         const results = await Frames.create({ frameName, frameUrl, thumbnail, referenceImage, description, language, user: req.user.id });
+
+        const Language = await Category.findById(results.language);
+        if (!Language) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.frames.push(results._id);
+        const savedCategory = await Language.save();
+
+
+
 
 
         res.send(results);

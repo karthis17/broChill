@@ -8,6 +8,7 @@ const Jimp = require('jimp');
 
 // const multer = require('multer');
 const path = require('path');
+const Category = require('../model/categoryModel');
 
 
 const cpUpload = uploadFile.fields([
@@ -57,6 +58,15 @@ router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
     try {
         const qu = await Quizzes.create({ questions, results, description, referenceImage: referencesImage, language, user: req.user.id });
+        const category = await Category.findById(qu.language);
+        if (!category) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        category.data.fanQuizzes.push(qu._id);
+        const savedCategory = await category.save();
+
+
+
         res.send(qu);
     } catch (error) {
         res.status(500).send({ message: error.message });

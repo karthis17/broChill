@@ -14,6 +14,7 @@ module.exports = mongoose.model("riddle", {
     thumbnail: { type: String, required: true },
     description: { type: String, required: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
 
 
     createdAt: { type: Date, default: Date.now }

@@ -5,7 +5,9 @@ module.exports = mongoose.model("frames", {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
 
     frameName: { type: String, required: true },
+    description: { type: String, required: true },
     frameUrl: { type: String, required: true },
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
 
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
     shares: { type: Number, default: 0 },

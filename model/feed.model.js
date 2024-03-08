@@ -13,7 +13,6 @@ module.exports = mongoose.model("feed", {
         text: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
-    titleDifLang: Array,
-    descriptionDifLang: Array,
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
     createdAt: { type: Date, default: Date.now },
 });

@@ -8,7 +8,8 @@ module.exports = mongoose.model('FunTest', {
 
     category: { type: String, required: true },
 
-    language: String,
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
+
 
     description: { type: String, required: true },
     user_image: Number,

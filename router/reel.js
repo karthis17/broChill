@@ -3,6 +3,7 @@ const reels = require('../model/reels.model');
 const auth = require('../middelware/auth');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 const adminRole = require('../middelware/checkRole');
+const Category = require('../model/categoryModel');
 
 
 router.post('/upload-reel', auth, adminRole, uploadFile.single('reel'), async (req, res) => {
@@ -21,6 +22,15 @@ router.post('/upload-reel', auth, adminRole, uploadFile.single('reel'), async (r
             return res.status(400).json({ message: 'Description is required' });
         }
         const reel = await reels.create({ category, titleDifLang, fileUrl, descriptionDifLang, user: req.user.id, title, description });
+
+        const Language = await Category.findById(reel.language);
+        if (!Language) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.reels.push(reel._id);
+        const savedCategory = await Language.save();
+
+
         return res.status(201).json(reel);
     } catch (error) {
         console.error(error);

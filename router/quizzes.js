@@ -8,6 +8,8 @@ const Jimp = require('jimp');
 
 // const multer = require('multer');
 const path = require('path');
+const { query } = require('express');
+const Category = require('../model/categoryModel');
 
 
 // const storage = multer.diskStorage({
@@ -72,6 +74,14 @@ router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
     try {
         const qu = await Quizzes.create({ questions, results, description, referenceImage: referencesImage, language, user: req.user.id });
+
+        const Language = await Category.findById(qu.language);
+        if (!Language) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.quizzes.push(qu._id);
+        const savedCategory = await Language.save();
+
         res.send(qu);
     } catch (error) {
         res.status(500).send({ message: error.message });
