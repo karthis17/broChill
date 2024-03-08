@@ -14,7 +14,7 @@ const Guessgame = require('../model/guessGame.model');
 
 // Route to get all distinct languages in the Category collection
 router.get('/', (req, res) => {
-    Category.find({}, { language: 1, _id: 1 })
+    Category.find({}, { language: 1, native: 1, _id: 1 })
         .then(languages => {
             res.status(200).json(languages);
         })
