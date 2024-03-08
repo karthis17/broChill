@@ -160,11 +160,16 @@ router.get('/single-percentage/:id', cpup1, async (req, res) => {
 
         let maskImages = []
 
-        if (req.files['image']) {
+        try {
 
-            maskImages = await Promise.all(req.files['image'].map(async (file) => {
-                return await uploadAndGetFirebaseUrl(file);
-            }));
+            if (req.files['image']) {
+
+                maskImages = await Promise.all(req.files['image'].map(async (file) => {
+                    return await uploadAndGetFirebaseUrl(file);
+                }));
+            }
+        } catch (err) {
+            console.log(err);
         }
 
 
@@ -198,13 +203,18 @@ router.post('/double-percentage/:id', cpup2, async (req, res) => {
 
         let maskImages = []
 
-        if (req.files['image']) {
+        try {
 
-            maskImages = await Promise.all(req.files['image'].map(async (file) => {
-                return await uploadAndGetFirebaseUrl(file);
-            }));
+            if (req.files['image']) {
+
+                maskImages = await Promise.all(req.files['image'].map(async (file) => {
+                    return await uploadAndGetFirebaseUrl(file);
+                }));
+            }
         }
-
+        catch (err) {
+            console.log(err);
+        }
         const result = await Promise.all(ress.frames.map(async (frame, i) => {
             const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
             const baseImage = await frame.frameUrl;

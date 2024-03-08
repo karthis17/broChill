@@ -52,7 +52,7 @@ app.use("/api/flames", flamesRouter);
 app.use("/api/quizzes", quizzeRouter);
 app.use("/api/nameing", nameRouter);
 app.use("/api/guess-game", guessRouter);
-app.use("/api/fun-quizzes", funQuRouter);
+app.use("/api/fan-quizzes", funQuRouter);
 app.use("/api/general-question", generalRouter);
 app.use("/api/riddles", riddleRouter);
 app.use("/api/reels", reelRouter);

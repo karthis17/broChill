@@ -5,6 +5,7 @@ const pickAndKick = require('../model/pickOneKickOne.model');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 const adminRole = require('../middelware/checkRole');
 
+const mongoose = require('mongoose');
 
 const cpUplad = uploadFile.fields([{
     name: 'option', maxCount: 50
@@ -51,7 +52,7 @@ router.post('/add-question', auth, adminRole, cpUplad, async (req, res) => {
         console.log(req.files["referencesImage"])
         let referencesImage = await uploadAndGetFirebaseUrl(req.files['referencesImage'][0])
 
-        const result = await pickAndKick.create({ questions, referenceImage: referencesImage, language, description, user: req.user.id });
+        const result = await pickAndKick.create({ questions, thumbnail: referencesImage, language, description, user: req.user.id });
 
         res.json(result);
 
@@ -62,10 +63,19 @@ router.post('/add-question', auth, adminRole, cpUplad, async (req, res) => {
     }
 });
 
-router.get('/get-by-id/:id', async (req, res) => {
+router.get('/get/:id', async (req, res) => {
     let lang = req.query.lang
     try {
-        const pick = await pickAndKick.findById(req.params.id);
+        const pick = await pickAndKick.findById(req.params.id).populate({
+            path: 'user',
+            select: '-password' // Exclude password and email fields from the 'user' document
+        }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user',
+                select: '-password'
+            }
+        });
 
 
         res.send(pick);
@@ -79,7 +89,16 @@ router.get('/get-by-id/:id', async (req, res) => {
 router.get('/get-all', async (req, res) => {
     try {
         let lang = req.query.lang
-        const pick = await pickAndKick.find({ language: lang }).populate('user', 'comments.user');
+        const pick = await pickAndKick.find({ language: lang }).populate({
+            path: 'user',
+            select: '-password' // Exclude password and email fields from the 'user' document
+        }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user',
+                select: '-password'
+            }
+        });
 
         res.send(pick);
 
@@ -91,45 +110,57 @@ router.get('/get-all', async (req, res) => {
     }
 });
 
-router.post('/play', async (req, res) => {
 
-    let lang = req.params.lang;
+router.post('/:postId/vote', auth, async (req, res) => {
 
-    const { option, questionId } = req.body;
+    let pollId = req.params.postId;
 
-    if (!option || !questionId) {
-        res.status(404).send({ error: "Please provide a valid option and id" })
-    }
+    const { questionId, optionId } = req.body;
+
 
     try {
-
-        const ress = await pickAndKick.findById(questionId);
-
-        if (lang && lang.toLowerCase() !== "english") {
-
-            const option1 = ress.option1DifLang.find(tit => { tit.lang === lang });
-            const option2 = ress.option2DifLang.find(tit => { tit.lang === lang });
-
-            if (option2 && option1) {
-
-                ress.options[0]['option'] = option1.text.toLowerCase();
-                ress.options[1]['option'] = option2.text.toLowerCase();
-
-            }
+        // Find the poll by ID
+        const poll = await pickAndKick.findById(pollId);
+        if (!poll) {
+            return res.status(404).json({ error: "Poll not found" });
         }
 
-        let result;
-        ress.options.forEach(element => {
-            if (element.option.toLowerCase() === option.toLowerCase() || e) result = element;
-        })
+        // Find the question in the poll
+        const question = poll.questions.find(qu => qu._id.equals(new mongoose.Types.ObjectId(questionId)));
+        if (!question) {
+            return res.status(404).json({ error: "Question not found in the poll" });
+        }
 
-        res.json(result);
+        // Check if the option exists in the question
+        const option = question.options.find(opt => opt._id.equals(new mongoose.Types.ObjectId(optionId)));
+        if (!option) {
+            return res.status(404).json({ error: "Option not found in the question" });
+        }
 
+        // Add user ID to votedUsers array
+        option.votedUsers.push(req.user.id);
+
+        // Update the vote count for the selected option
+        option.vote = option.vote ? parseInt(option.vote) + 1 : 1;
+
+        // Increment the total votes for the question
+        question.totalVotes = (question.totalVotes || 0) + 1;
+
+        // Calculate the percentage of votes for each option
+        question.options.forEach(opt => {
+            opt.percentage = ((opt.vote || 0) / question.totalVotes) * 100;
+        });
+
+        // Save the updated poll
+        await poll.save();
+
+        res.status(200).json({ message: "Vote recorded successfully", Poll: poll });
     } catch (error) {
-
-        res.status(500).json({ error: error.message });
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
+
 
 router.delete("/delete/:id", auth, adminRole, async function (req, res) {
 

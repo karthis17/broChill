@@ -15,9 +15,11 @@ module.exports = mongoose.model("pickKick", {
         optionType: String,
         options: [{
             option: { type: String, required: true },
-            points: { type: Number, required: true },
-        }]
-
+            vote: { type: Number, default: 0 },
+            percentage: { type: Number, default: 0 }, // Percentage of votes for this option
+            votedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+        }],
+        totalVotes: { type: Number, default: 0 }
     }],
 
     likes: [{

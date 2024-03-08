@@ -24,7 +24,7 @@ module.exports = mongoose.model("fanQuizzes", {
         optionType: String,
         options: [{
             option: { type: String, required: true },
-            answer: { type: Number, required: true },
+            points: { type: Number, required: true },
         }]
 
     }],
@@ -38,8 +38,7 @@ module.exports = mongoose.model("fanQuizzes", {
             height: { type: Number },
         },
         coordinates: [],
-        textCoordinates: [],
-        scoreCoordinates: {
+        scorePosition: {
             x: Number,
             y: Number,
             width: Number,

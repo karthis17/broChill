@@ -144,7 +144,7 @@ router.post("/calculate-love/:postId", async (req, res) => {
 });
 
 
-router.post("/calculate-friends/:postId", async (req, res) => {
+router.post("/calculate-friendship/:postId", async (req, res) => {
 
 
     const { name1, name2 } = req.body;

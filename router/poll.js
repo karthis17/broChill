@@ -48,12 +48,19 @@ router.get('/get-poll/:id', async (req, res) => {
 });
 
 
-router.get('/getAll', async (req, res) => {
+router.get('/get-all', async (req, res) => {
     try {
         const lang = req.query.lang ? req.query.lang : "english";
 
-        const poll = await Poll.find({ language: lang }).populate('user', 'comments.user');
-
+        const poll = await Poll.find({ language: lang }).populate({
+            path: 'user',
+            select: '-password' // Exclude password and email fields from the 'user' document
+        }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user'
+            }
+        });
 
         res.json(poll);
 

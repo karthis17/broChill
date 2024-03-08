@@ -56,7 +56,16 @@ router.get('/get-all', async function (req, res) {
 
 
     try {
-        const data = await Frames.find({ language: lang }).populate('user', 'comments.user');
+        const data = await Frames.find({ language: lang }).populate({
+            path: 'user',
+            select: '-password' // Exclude password and email fields from the 'user' document
+        }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user',
+                select: '-password'
+            }
+        });
         res.send(data);
     } catch (error) {
         res.status(500).send("internal error: " + error.message);
@@ -123,11 +132,20 @@ router.post('/share', async (req, res) => {
     }
 });
 
-router.get('get/:id', async (req, res) => {
+router.get('/get/:id', async (req, res) => {
     const lang = req.query.lang;
 
     try {
-        const response = await Frames.findById(req.params.id).populate('comments.user');
+        const response = await Frames.findById(req.params.id).populate({
+            path: 'user',
+            select: '-password' // Exclude password and email fields from the 'user' document
+        }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user',
+                select: '-password'
+            }
+        });
         res.send(response);
     } catch (error) {
         res.status(500).json({ message: "Internal server error", error: error.message });
