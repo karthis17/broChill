@@ -179,11 +179,11 @@ router.post('/get-result', cpUplad, async (req, res) => {
         // scoreCoord["text"] = score;
         // texts.push(scoreCoord);
 
-        const outputPath = path.join(__dirname, `../uploads/askhdjks.png`);
-
+        const outputPath = path.join(__dirname, `../uploads//${req.body.quizze_id}.png`);
 
         await applyMask(baseImage, squareCoord, outputPath, `${score}`, scoreCoord, result1.frame_size.width, result1.frame_size.height)
 
+        res.send({ result: `${req.protocol}://${req.get('host')}/${req.body.quizze_id}.png` })
 
         // text.forEach(element => {
         //     let te = element.split(' ');
@@ -194,7 +194,7 @@ router.post('/get-result', cpUplad, async (req, res) => {
 
         // console.log(response, result1);
 
-        res.json(result1);
+
     } catch (error) {
         res.status(500).json(error.message);
     }

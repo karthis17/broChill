@@ -112,7 +112,7 @@ router.get('/get-fanquizze/:id', async (req, res) => {
     }
 
     try {
-        const fanquizze = await Quizzes.findById(req.params.id);
+        const fanquizze = await contest.findById(req.params.id);
         res.json(fanquizze);
     } catch (error) {
         res.status(500).json(error.message);
@@ -130,7 +130,7 @@ router.post('/get-result', cpUplad, async (req, res) => {
 
     try {
 
-        const response = await Quizzes.findById(quizze_id);
+        const response = await contest.findById(quizze_id);
 
         const result1 = await response.results.find(result => result.minScore <= score && result.maxScore >= score);
 
@@ -185,10 +185,11 @@ router.post('/get-result', cpUplad, async (req, res) => {
         // scoreCoord["text"] = score;
         // texts.push(scoreCoord);
 
-        const outputPath = path.join(__dirname, `../uploads/askhdjks.png`);
+        const outputPath = path.join(__dirname, `../uploads//${req.body.quizze_id}.png`);
 
 
         await applyMask(baseImage, squareCoord, outputPath, `${score}`, scoreCoord, result1.frame_size.width, result1.frame_size.height)
+        res.send({ result: `${req.protocol}://${req.get('host')}/${req.body.quizze_id}.png` })
 
 
         // text.forEach(element => {
@@ -200,7 +201,6 @@ router.post('/get-result', cpUplad, async (req, res) => {
 
         // console.log(response, result1);
 
-        res.json(result1);
     } catch (error) {
         res.status(500).json(error.message);
     }
@@ -225,7 +225,7 @@ router.post('/:postId/like', auth, async (req, res) => {
         const userId = req.user.id; // Assuming user is authenticated and user ID is available in request
 
         // Check if the post is already liked by the user
-        const post = await Quizzes.findById(postId);
+        const post = await contest.findById(postId);
         const isLiked = post.likes.includes(userId);
 
         let like = false;
@@ -259,7 +259,7 @@ router.post('/:postId/like', auth, async (req, res) => {
 
 router.post('/share', async (req, res) => {
     try {
-        const response = await Quizzes.findByIdAndUpdate(req.body.id, { $inc: { shares: 1 } })
+        const response = await contest.findByIdAndUpdate(req.body.id, { $inc: { shares: 1 } })
 
 
         res.json(response);
@@ -274,7 +274,7 @@ router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await Quizzes.findByIdAndUpdate(req.body.id, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
+        const response = await contest.findByIdAndUpdate(req.body.id, { $push: { comments: { text: req.body.comment, user: req.user.id } } })
         res.status(200).json({
             message: "comment added successfully",
             data: response

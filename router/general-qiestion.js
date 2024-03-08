@@ -5,6 +5,8 @@ const adminRole = require('../middelware/checkRole');
 // const multer = require('multer');
 const Category = require('../model/categoryModel');
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const path = require('path');
+const Jimp = require('jimp');
 
 
 const cpUpload = uploadFile.fields([
@@ -85,11 +87,11 @@ const cpUplad = uploadFile.fields([
 
 
 router.post('/get-result', cpUplad, async (req, res) => {
-    let { score, quizze_id } = req.body;
+    let { score, postId } = req.body;
 
     try {
 
-        const response = await general.findById(quizze_id);
+        const response = await general.findById(postId);
 
         const result1 = await response.results.find(result => result.minScore <= score && result.maxScore >= score);
 
@@ -144,7 +146,7 @@ router.post('/get-result', cpUplad, async (req, res) => {
         // scoreCoord["text"] = score;
         // texts.push(scoreCoord);
 
-        const outputPath = path.join(__dirname, `../uploads/askhdjks.png`);
+        const outputPath = path.join(__dirname, `../uploads//${postId}.png`);
 
 
         await applyMask(baseImage, squareCoord, outputPath, `${score}`, scoreCoord, result1.frame_size.width, result1.frame_size.height)
@@ -153,13 +155,13 @@ router.post('/get-result', cpUplad, async (req, res) => {
         // text.forEach(element => {
         //     let te = element.split(' ');
         //     te.forEach(line => {
-        //         line.includes('<fanme')
+        //         line.includes('<fanme'){re}
         //     })
         // });
 
         // console.log(response, result1);
 
-        res.json(result1);
+        res.send({ result: `${req.protocol}://${req.get('host')}/${postId}.png` })
     } catch (error) {
         res.status(500).json(error.message);
     }
