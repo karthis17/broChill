@@ -56,6 +56,10 @@ const categorySchema = new mongoose.Schema({
         gkQuestion: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'generalQuestion'
+        }],
+        riddles: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'riddle'
         }]
         // Add more categories as needed
     }

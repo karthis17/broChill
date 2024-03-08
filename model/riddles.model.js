@@ -1,21 +1,48 @@
 const { default: mongoose } = require("mongoose");
 
 module.exports = mongoose.model("riddle", {
-    question: { type: String, required: true },
-    options: [{
-        option: {},
+
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+
+    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
+
+
+    questions: [{
+
+        question: { type: String, required: true },
+        questionType: { type: String, required: true },
+        optionType: String,
+        options: [{
+            option: { type: String },
+            points: { type: Number },
+        }],
+        comments: [{
+            user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+            text: { type: String },
+            createdAt: { type: Date, default: Date.now }
+        }],
+
+        hasOption: { type: Boolean, required: true },
     }],
-    answer: { type: String, required: true },
+
+    category: String,
+    subCategory: String,
+
+
+
+    referenceImage: { type: String },
+
+    description: { type: String, required: true },
+
+    likes: [{
+        type: mongoose.Schema.Types.ObjectId, ref: 'User'
+    }],
     comments: [{
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         text: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
-    thumbnail: { type: String, required: true },
-    description: { type: String, required: true },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
-    language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
-
+    shares: { type: Number, default: 0 },
 
     createdAt: { type: Date, default: Date.now }
 });

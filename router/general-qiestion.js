@@ -19,7 +19,7 @@ const cpUpload = uploadFile.fields([
 
 router.post('/add-question', auth, adminRole, cpUpload, async (req, res) => {
 
-    let { questions, results, description, language, resultImage } = req.body;
+    let { questions, results, description, language, resultImage, category, subCategory } = req.body;
 
     console.log(req.body)
 

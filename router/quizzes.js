@@ -37,7 +37,7 @@ const cpUpload = uploadFile.fields([
 
 router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
-    let { questions, results, description, language } = req.body;
+    let { questions, results, description, language, category, subCategory } = req.body;
 
     console.log(req.body)
 
@@ -73,7 +73,7 @@ router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
 
     try {
-        const qu = await Quizzes.create({ questions, results, description, referenceImage: referencesImage, language, user: req.user.id });
+        const qu = await Quizzes.create({ questions, results, description, referenceImage: referencesImage, category, subCategory, language, user: req.user.id });
 
         const Language = await Category.findById(qu.language);
         if (!Language) {

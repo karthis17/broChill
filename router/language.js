@@ -67,6 +67,12 @@ router.get('/data/:language', (req, res) => {
         }).populate({
             path: 'data.guessGame',
             model: Guessgame
+        }).populate({
+            path: 'data.gkQuestion',
+            model: generalQuestion
+        }).populate({
+            path: 'data.riddles',
+            model: riddle
         })
         // Add more population as needed
         .exec()

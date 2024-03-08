@@ -22,7 +22,7 @@ const cpUpload = uploadFile.fields([
 
 router.post('/add-question', auth, adminRole, cpUpload, async (req, res) => {
 
-    let { questions, results, description, language, resultImage } = req.body;
+    let { questions, results, description, language, resultImage, category, subCategory } = req.body;
 
     console.log(req.body)
 
@@ -69,12 +69,12 @@ router.post('/add-question', auth, adminRole, cpUpload, async (req, res) => {
 
 
     try {
-        const qu = await guess.create({ questions, results, description, referenceImage: referencesImage, language, resultImage, user: req.user.id });
-        const category = await Category.findById(qu.language);
-        if (!category) {
+        const qu = await guess.create({ questions, results, description, referenceImage: referencesImage, category, subCategory, language, resultImage, user: req.user.id });
+        const Language = await Category.findById(qu.language);
+        if (!Language) {
             return res.status(404).send({ success: false, error: 'Language not found' });
         }
-        category.data.guessGame.push(qu._id);
+        Language.data.guessGame.push(qu._id);
         const savedCategory = await category.save();
 
 
