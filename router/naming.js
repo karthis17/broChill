@@ -340,19 +340,15 @@ router.post('/name-meaning/:id', async (req, res) => {
     try {
         const result = await Nameing.findById(req.params.id);
 
-        let i = 0;
 
-        const mean = result.meanings.filter((nam) => {
-            if (nam.letter === name.charAt(i)) {
-                i++
-                return nam;
-            }
-            return false;
-        });
+        console.log(name.length)
+
+        const mean = [...name.toLowerCase()].map(char => result.meanings.find(nam => nam.letter.toLowerCase().trim() === char));
 
         res.send(mean);
 
     } catch (error) {
+        console.log("Error:", error);
         res.status(500).send(error.message);
     }
 
@@ -363,6 +359,7 @@ router.post('/name-fact/:id', async (req, res) => {
 
     try {
         const result = await Nameing.findById(req.params.id);
+
         let facts = result.facts.filter(f => f.gender.toLowerCase().charAt(0) === gender.toLowerCase().charAt(0));
         const randNumber = Math.floor(Math.random() * facts.length);
         let fact = facts[randNumber];
