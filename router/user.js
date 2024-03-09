@@ -44,7 +44,11 @@ router.post(
                 });
             }
 
-            const avatar = await uploadAndGetFirebaseUrl(req);
+            let avatar = '';
+            if (req.file) {
+
+                avatar = await uploadAndGetFirebaseUrl(req);
+            }
 
             user = new User({
                 username,

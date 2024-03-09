@@ -144,11 +144,11 @@ router.post('/:postId/like', auth, async (req, res) => {
 
             // If already liked, unlike the post
             post.likes.pull(userId);
-            like = true;
+            dislike = true;
         } else {
             // If not liked, like the post
             post.likes.push(userId);
-            dislike = true;
+            like = true;
         }
 
         // Save the updated post
@@ -182,7 +182,13 @@ router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await Quizzes.findByIdAndUpdate(req.body.id, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true })
+        const response = await Quizzes.findByIdAndUpdate(req.body.id, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user',
+                select: '-password'
+            }
+        });
         res.status(200).json({
             message: "comment added successfully",
             data: response
