@@ -282,6 +282,35 @@ router.delete('/remove-profile', auth, async function (req, res) {
 });
 
 
+router.post('/edit-username', auth, async (req, res) => {
+
+    const userId = req.user.id;
+    const username = req.body.username;
+
+    if (!username) {
+        req.status(404).send({ success: false, message: "username is required" });
+    }
+
+    try {
+
+        const user = await User.findById(userId).select('-password');
+
+        user.username = username;
+
+        await user.save();
+
+        res.status(200).send({ success: true, message: "user name updated successfully", user: user });
+
+
+    } catch (error) {
+        res.status(500).send({ success: false, message: "Couldn't save profile", error: error.message });
+
+    }
+
+
+});
+
+
 router.delete('/remove-post/:postId', auth, async function (req, res) {
 
     const postId = req.params.postId;

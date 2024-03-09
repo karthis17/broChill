@@ -11,6 +11,7 @@ const categorySchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    categoryInNative: [{ category: String, inNative: String }],
     data: {
         // Structure your data according to your needs
         reels: [{

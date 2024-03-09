@@ -101,7 +101,7 @@ router.get('/data/:language', (req, res) => {
 
 router.post('/add-language', (req, res) => {
 
-    const { language, native } = req.body;
+    const { language, native, categoryNative } = req.body;
 
     const newCategory = new Category({
         language: language,
@@ -117,10 +117,12 @@ router.post('/add-language', (req, res) => {
             frames: [],
             pickOneKickOne: [],
             guessGame: [],
-
+            ContestQuiz: [],
             gkQuestion: [],
             riddle: []
-        }
+        },
+        categoryInNative: categoryNative,
+
     });
 
     // Save the new category
