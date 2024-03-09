@@ -14,7 +14,11 @@ const userSchema = new mongoose.Schema({
     appleId: String,
 
     // Avatar URL
-    avatar: String, // Assuming avatar is stored as a URL
+    profile: String, // Assuming avatar is stored as a URL
+
+    post: [{
+        profile: String,
+    }],
 
     // Additional fields based on your requirements
     displayName: String,

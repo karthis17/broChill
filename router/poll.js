@@ -90,23 +90,35 @@ router.post('/:pollId/vote', auth, async (req, res) => {
             return res.status(404).json({ error: "Option not found in the poll" });
         }
 
-        option.votedUsers.push(req.user.id);
-
-        // Update the vote count for the selected option
+        // option.votedUsers.push(req.user.id);
         option.vote = option.vote ? parseInt(option.vote) + 1 : 1;
 
-        // Increment the total votes for the poll
-        poll.totalVotes = poll.totalVotes + 1;
+        let existingUser = poll.totalVotes.find(opt => opt.user === req.user.id);
+
+        if (existingUser) {
+
+            let Votedoption = poll.options.find(opt => opt._id == existingUser.option_id);
+
+            Votedoption.vote = parseInt(option.vote) - 1
+
+            existingUser.option_id = optionId;
+
+        } else {
+
+            poll.totalVotes.push({ votedUser: req.user.id, option_id: option._id });
+        }
+
+
 
         // Calculate the percentage of votes for each option
         poll.options.forEach(opt => {
-            opt.percentage = ((opt.vote || 0) / poll.totalVotes) * 100;
+            opt.percentage = ((opt.vote || 0) / poll.totalVotes.length) * 100;
         });
 
         // Save the updated poll
         await poll.save();
 
-        res.status(200).json({ message: "Vote recorded successfully" });
+        res.status(200).json({ message: "Vote recorded successfully", poll: poll.options });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

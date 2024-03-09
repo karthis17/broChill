@@ -44,17 +44,17 @@ router.post(
                 });
             }
 
-            let avatar = '';
+            let profile = '';
             if (req.file) {
 
-                avatar = await uploadAndGetFirebaseUrl(req);
+                profile = await uploadAndGetFirebaseUrl(req);
             }
 
             user = new User({
                 username,
                 email,
                 password,
-                avatar
+                profile
             });
 
             const salt = await bcrypt.genSalt(10);
@@ -164,7 +164,7 @@ router.post(
 
 router.get("/me", auth, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('username', 'email');
+        const user = await User.findById(req.user.id).select(['username', 'email']);
         res.json(user);
     }
     catch (e) {
@@ -172,6 +172,146 @@ router.get("/me", auth, async (req, res) => {
     }
 });
 
+
+router.post('/add-profile', auth, uploadFile.single('profile'), async (req, res) => {
+
+    if (!req.file) {
+        res.status(404).send({ message: "profile pic not found", success: false });
+    }
+
+    const userId = req.user.id;
+
+    try {
+
+        let profile = await uploadAndGetFirebaseUrl(req);
+
+        const user = await User.findById(userId).select(['username', 'profile', 'email']);
+
+        user.profile = profile
+
+        user.save();
+
+        res.status(200).send({ success: true, message: "profile added successfully", user: user });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ success: false, message: "Couldn't save profile", error: error.message });
+    }
+});
+
+
+router.post("/add-post", auth, uploadFile.single('profile'), async (req, res) => {
+
+    if (!req.file) {
+        res.status(404).send({ message: "profile pic not found", success: false });
+    }
+
+    const userId = req.user.id;
+
+
+    try {
+        let profile = await uploadAndGetFirebaseUrl(req);
+
+        const user = await User.findById(userId).select(['username', 'profile', 'email', "post"]);
+
+        user.post.push({ profile })
+
+        user.save();
+
+        res.status(200).send({ success: true, message: "profile added successfully", user: user });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ success: false, message: "Couldn't save profile", error: error.message });
+    }
+
+})
+
+
+router.put('/edit-post/:postId', uploadFile.single('profile'), auth, async (req, res) => {
+
+    if (!req.file) {
+        res.status(404).send({ message: "profile pic not found", success: false });
+    }
+
+    const postId = req.params.postId;
+    const userId = req.user.id;
+
+    try {
+        let profile = await uploadAndGetFirebaseUrl(req);
+
+        const user = await User.findById(userId).select('-password');
+
+        const post = await user.post.find(pos => pos._id.toString() === postId);
+
+        console.log(post)
+
+        post.profile = profile;
+
+        user.save();
+
+        res.status(200).send({ success: true, message: "post edited successfully", user: user });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ success: false, message: "Couldn't save profile", error: error.message });
+    }
+
+});
+
+
+router.delete('/remove-profile', auth, async function (req, res) {
+
+    const userId = req.user.id;
+
+    try {
+        const user = await User.findById(userId).select('-password');
+
+        user.profile = "";
+        await user.save();
+
+        res.status(200).send({ success: true, message: "profile deleted successfully", user: user });
+
+
+    } catch (error) {
+
+        res.status(500).send({ success: false, message: "Couldn't save profile", error: error.message });
+
+
+    }
+});
+
+
+router.delete('/remove-post/:postId', auth, async function (req, res) {
+
+    const postId = req.params.postId;
+    const userId = req.user.id;
+
+    try {
+        const user = await User.findById(userId).select('-password');
+
+        const postIndex = user.post.findIndex(post => post._id.toString() === postId);
+        if (postIndex === -1) {
+            return res.status(404).json({ error: "Post not found" });
+        }
+
+        // Remove the post from the array
+        user.post.splice(postIndex, 1);
+
+        // Save the updated user document
+        await user.save();
+
+        res.status(200).send({ success: true, message: "post deleted successfully", user: user });
+
+
+    } catch (error) {
+
+        res.status(500).send({ success: false, message: "Couldn't save profile", error: error.message });
+
+
+    }
+
+});
 
 
 router.post("/follow", auth, async (req, res) => {

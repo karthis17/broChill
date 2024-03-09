@@ -4,7 +4,6 @@ const optionSchema = new mongoose.Schema({
     option: { type: String, required: true },
     vote: { type: Number, default: 0 },
     percentage: { type: Number, default: 0 }, // Percentage of votes for this option
-    votedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Array of user IDs who voted for this option
 });
 
 const pollSchema = new mongoose.Schema({
@@ -24,7 +23,10 @@ const pollSchema = new mongoose.Schema({
         createdAt: { type: Date, default: Date.now }
     }],
     shares: { type: Number, default: 0 },
-    totalVotes: { type: Number, default: 0 } // Total number of votes for the poll
+    totalVotes: [{
+        votedUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        option_id: { type: mongoose.Schema.Types.ObjectId }
+    }] // Total number of votes for the poll
 }, { timestamps: true });
 
 const Poll = mongoose.model('Poll', pollSchema);
