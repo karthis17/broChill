@@ -53,17 +53,17 @@ router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
         results[m].resultImg = await uploadAndGetFirebaseUrl(req.files["answer"][m]);
     }
 
-    let referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
-
 
     try {
+        let referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
+
         const qu = await Quizzes.create({ questions, results, description, referenceImage: referencesImage, category, subCategory, language, user: req.user.id });
-        const category = await Category.findById(qu.language);
-        if (!category) {
+        const Language = await Category.findById(qu.language);
+        if (!Language) {
             return res.status(404).send({ success: false, error: 'Language not found' });
         }
-        category.data.fanQuizzes.push(qu._id);
-        const savedCategory = await category.save();
+        Language.data.fanQuizzes.push(qu._id);
+        const savedLanguage = await Language.save();
 
 
 

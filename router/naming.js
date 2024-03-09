@@ -223,22 +223,28 @@ router.post("/calculate-friendship/:postId", async (req, res) => {
 router.post('/flames/:id', async (req, res) => {
 
     const { name1, name2 } = req.body;
+
+    console.log(name1, name2);
     try {
 
         const word = await calculateFLAMES(name1, name2);
 
         // const word = "love"
 
+        console.log(word);
+
         const result = await Nameing.findById(req.params.id);
 
         let frame = await Promise.all(result.frames.filter((frame, i) => {
+            console.log(frame.flame_word)
             if (frame.flame_word.toLowerCase() === word.toLowerCase()) {
                 return frame;
             }
         }));
 
         frame = frame[0]
-        console.log(result, frame);
+
+        console.log(frame)
 
         const baseImage = await frame.frameUrl;
         const outputPath = path.join(__dirname, `../uploads/${req.params.id}.png`);
@@ -293,20 +299,27 @@ async function applyMask(baseImagePath, outputPath, bwidth, bheight, coord) {
             const { x, y, width, height } = co.coordinate;
             let text = co.text;
 
-            // Calculate the center coordinates within the specified region
-            const centerX = x + width / 2;
-            const centerY = y + height / 2;
+            // // Calculate the center coordinates within the specified region
+            // const centerX = x + width / 2;
+            // const centerY = y + height / 2;
 
-            // Measure text width and height
-            const textWidth = Jimp.measureText(font, text);
-            const textHeight = Jimp.measureTextHeight(font, text);
+            // // Measure text width and height
+            // const textWidth = Jimp.measureText(font, text);
+            // const textHeight = Jimp.measureTextHeight(font, text);
 
-            // Calculate the starting position of the text to achieve center alignment
-            const textX = centerX - textWidth / 2;
-            const textY = centerY - textHeight / 2;
+            // // Calculate the starting position of the text to achieve center alignment
+            // const textX = centerX - textWidth / 2;
+            // const textY = centerY - textHeight / 2;
 
-            // Print the text in the center of the region
-            image.print(font, textX, textY, text);
+            // // Print the text in the center of the region
+            // image.print(font, textX, textY, text);
+
+            image.print(font, parseInt(x), parseInt(y), {
+                text: text,
+                alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+                alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+            }, parseInt(width), parseInt(height));
+
         })))
 
         // Define the text properties
