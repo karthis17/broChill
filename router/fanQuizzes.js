@@ -307,22 +307,24 @@ async function applyMask(baseImagePath, maskImages, outputPath, texts, scoreCoor
         const { x, y, width, height } = scoreCoord;
         let text = texts;
 
-        // Calculate the center coordinates within the specified region
-        const centerX = x + width / 2;
-        const centerY = y + height / 2;
+        // // Calculate the center coordinates within the specified region
+        // const centerX = x + width / 2;
+        // const centerY = y + height / 2;
 
-        // Measure text width and height
-        const textWidth = Jimp.measureText(font, text);
-        const textHeight = Jimp.measureTextHeight(font, text);
+        // // Measure text width and height
+        // const textWidth = Jimp.measureText(font, text);
+        // const textHeight = Jimp.measureTextHeight(font, text);
 
-        // Calculate the starting position of the text to achieve center alignment
-        const textX = centerX - textWidth / 2;
-        const textY = centerY - textHeight / 2;
+        // // Calculate the starting position of the text to achieve center alignment
+        // const textX = centerX - textWidth / 2;
+        // const textY = centerY - textHeight / 2;
 
         // Print the text in the center of the region
-        baseImage.print(font, textX, textY, text);
-
-
+        baseImage.print(font, parseInt(x), parseInt(y), {
+            text: texts,
+            alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+            alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+        }, parseInt(width), parseInt(height));
         await baseImage.writeAsync(outputPath);
 
 

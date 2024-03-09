@@ -183,11 +183,11 @@ router.get('/single-percentage/:id', cpup1, async (req, res) => {
 
 
         const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
-        const baseImage = await re.frame[0].frameUrl;
+        const baseImage = await re.frames[0].frameUrl;
         const coordinates = re.frames[0].coordinates;
         const width = re.frames[0].frame_size.width;
         const height = re.frames[0].frame_size.height;
-        const percentage = await re.frame[0].percentagePosition;
+        const percentage = await re.frames[0].percentagePosition;
         const outputPath = path.join(__dirname, `../uploads/${req.params.id + await re.frames[0]._id}.png`);
 
 
@@ -238,7 +238,7 @@ router.post('/double-percentage/:id', cpup2, async (req, res) => {
             await applyMask(baseImage, maskImages, outputPath, coord, width, height, percentage, randomNumber);
 
             return {
-                result1: `${req.protocol}://${req.get('host')}/${req.params.id + await frame._id}`,
+                result1: `${req.protocol}://${req.get('host')}/${req.params.id + await frame._id}.png`,
             };
         }));
 
@@ -502,19 +502,24 @@ async function applyMask(baseImagePath, maskImages, outputPath, coordinates, bwi
         const { x, y, width, height } = tcoordinates;
 
         // Calculate the center coordinates within the specified region
-        const centerX = x + width / 2;
-        const centerY = y + height / 2;
+        // const centerX = x + width / 2;
+        // const centerY = y + height / 2;
 
-        // Measure text width and height
-        const textWidth = Jimp.measureText(font, text);
-        const textHeight = Jimp.measureTextHeight(font, text);
+        // // Measure text width and height
+        // const textWidth = Jimp.measureText(font, text);
+        // const textHeight = Jimp.measureTextHeight(font, text);
 
-        // Calculate the starting position of the text to achieve center alignment
-        const textX = centerX - textWidth / 2;
-        const textY = centerY - textHeight / 2;
+        // // Calculate the starting position of the text to achieve center alignment
+        // const textX = centerX - textWidth / 2;
+        // const textY = centerY - textHeight / 2;
 
-        // Print the text in the center of the region
-        image.print(font, textX, textY, text);
+        // // Print the text in the center of the region
+
+        image.print(font, parseInt(x), parseInt(y), {
+            text: text,
+            alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+            alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+        }, parseInt(width), parseInt(height));
 
         // Save the modified image
         await image.writeAsync(outputPath);
