@@ -76,7 +76,13 @@ module.exports = mongoose.model('nameing', {
 
     category: { type: String, required: true },
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
-
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    comments: [{
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        text: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now }
+    }],
+    shares: { type: Number, default: 0 },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     description: { type: String },
     thumbnail: { type: String, required: true },
