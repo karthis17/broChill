@@ -164,7 +164,7 @@ router.post(
 
 router.get("/me", auth, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select(['username', 'email']);
+        const user = await User.findById(req.user.id).select('-password');
         res.json(user);
     }
     catch (e) {
