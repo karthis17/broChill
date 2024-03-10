@@ -164,7 +164,6 @@ router.get('/category-names', (req, res) => {
                 // Check each category in data and add non-empty category names to the array
                 for (const key in data) {
                     if (data.hasOwnProperty(key) && Array.isArray(data[key]) && data[key].length > 0) {
-                        console.log(key)
                         nonEmptyCategories.push(categoryNames[nameInDataBase.indexOf(key)]);
                     }
                 }
