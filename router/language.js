@@ -119,7 +119,7 @@ router.post('/add-language', (req, res) => {
             guessGame: [],
             ContestQuiz: [],
             gkQuestion: [],
-            riddle: []
+            riddles: []
         },
         categoryInNative: categoryNative,
 
@@ -142,21 +142,35 @@ router.get('/category-names', (req, res) => {
             }
 
             const result = [];
+            const categoryNames = ["Reels", "Feeds", "Personality Quiz", "Fans Quiz", "Fun Test", "Name Test", "Polls", "Frames", "Party Games", "Contest Quiz", "General Knowledge Quiz", "Riddles"];
+            const nameInDataBase = ["reels",
+                "feeds",
+                "quizzes",
+                "fanQuizzes",
+                "funTest",
+                "nameTest",
+                "polls",
+                "frames",
+                "pickOneKickOne",
+                "ContestQuiz",
+                "gkQuestion",
+                "riddles"]
 
             // Iterate over each category
             categories.forEach(category => {
-                const nonEmptyCategories = [];
+                const nonEmptyCategories = ['All'];
                 const data = category.data;
 
                 // Check each category in data and add non-empty category names to the array
                 for (const key in data) {
                     if (data.hasOwnProperty(key) && Array.isArray(data[key]) && data[key].length > 0) {
-                        nonEmptyCategories.push(key);
+                        console.log(key)
+                        nonEmptyCategories.push(categoryNames[nameInDataBase.indexOf(key)]);
                     }
                 }
 
                 // If non-empty categories found, add language and category names to result
-                if (nonEmptyCategories.length > 0) {
+                if (nonEmptyCategories.length > 1) {
                     result.push({ _id: category._id, language: category.language, native: category.native, category: nonEmptyCategories });
                 }
             });

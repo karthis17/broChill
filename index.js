@@ -43,30 +43,32 @@ app.get('/', (req, res) => {
     res.send("hello world");
 });
 
+const categoryNames = ["Reels", "Feeds", "Personality Quiz", "Fans Quiz", "Fun Test", "Name Test", "Polls", "Frames", "Party Games", "Contest Quiz", "General Knowledge Quiz", "Riddles"];
+
 app.use("/api/users", userRouter);
 app.use("/api", allRouter);
 app.use("/api/admin", adminRouter);
 app.use(express.static(path.join(__dirname, 'uploads')));
-app.use("/api/img", imageRouter);
-app.use("/api/poll", pollRouter);
-app.use("/api/frame", frameRouter);
-app.use("/api/flames", flamesRouter);
-app.use("/api/quizzes", quizzeRouter);
-app.use("/api/nameing", nameRouter);
-app.use("/api/guess-game", guessRouter);
-app.use("/api/fan-quizzes", funQuRouter);
-app.use("/api/general-question", generalRouter);
+// app.use("/api/img", imageRouter);
+app.use("/api/polls", pollRouter);
+app.use("/api/frames", frameRouter);
+// app.use("/api/flames", flamesRouter);
+app.use("/api/personalityquiz", quizzeRouter);
+// app.use("/api/nameing", nameRouter);
+// app.use("/api/guess-game", guessRouter);
+app.use("/api/fansquiz", funQuRouter);
+app.use("/api/generalknowledgequiz", generalRouter);
 app.use("/api/riddles", riddleRouter);
 app.use("/api/reels", reelRouter);
 app.use("/api/feeds", feedRouter);
 app.use("/api/menu", menuRouter);
-app.use("/api/pick-and-kick", pickRouter);
-app.use("/api/love-friendship-calc", calc);
+app.use("/api/partygames", pickRouter);
+// app.use("/api/love-friendship-calc", calc);
 // app.use('/api/random-image', RandImgRouter);
 app.use('/api/funtest', funtestRouter);
-app.use('/api/nameing', nameingRouter);
+app.use('/api/nametest', nameingRouter);
 app.use('/api/language', lnagRouter);
-app.use('/api/contest-quizzes', contest);
+app.use('/api/contestquiz', contest);
 // app.use('/api/percentage-type', percentageTypeRouter);
 
 mongoose.connect(process.env.MONG_URL).then(() => {
