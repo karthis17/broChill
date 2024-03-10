@@ -57,7 +57,7 @@ app.use("/api/personalityquiz", quizzeRouter);
 // app.use("/api/nameing", nameRouter);
 // app.use("/api/guess-game", guessRouter);
 app.use("/api/fansquiz", funQuRouter);
-app.use("/api/generalknowledgequiz", generalRouter);
+app.use("/api/gkquiz", generalRouter);
 app.use("/api/riddles", riddleRouter);
 app.use("/api/reels", reelRouter);
 app.use("/api/feeds", feedRouter);

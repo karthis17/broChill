@@ -142,7 +142,7 @@ router.get('/category-names', (req, res) => {
             }
 
             const result = [];
-            const categoryNames = ["Reels", "Feeds", "Personality Quiz", "Fans Quiz", "Fun Test", "Name Test", "Polls", "Frames", "Party Games", "Contest Quiz", "General Knowledge Quiz", "Riddles"];
+            const categoryNames = ["Reels", "Feeds", "Personality Quiz", "Fans Quiz", "Fun Test", "Name Test", "Polls", "Frames", "Party Games", "Contest Quiz", "GK Quiz", "Riddles"];
             const nameInDataBase = ["reels",
                 "feeds",
                 "quizzes",
