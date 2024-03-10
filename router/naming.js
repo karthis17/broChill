@@ -229,7 +229,10 @@ router.post('/flames/:id', async (req, res) => {
 
         const word = await calculateFLAMES(name1, name2);
 
-        // const word = "love"
+        if (!word) {
+
+            const word = "love"
+        }
 
         console.log(word);
 

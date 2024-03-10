@@ -64,12 +64,12 @@ router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
     try {
         const qu = await contest.create({ questions, results, description, referenceImage: referencesImage, category, subCategory, language, user: req.user.id });
-        const category = await Category.findById(qu.language);
-        if (!category) {
+        const Language = await Category.findById(qu.language);
+        if (!Language) {
             return res.status(404).send({ success: false, error: 'Language not found' });
         }
-        category.data.fanQuizzes.push(qu._id);
-        const savedCategory = await category.save();
+        Language.data.ContestQuiz.push(qu._id);
+        const savedLanguage = await Language.save();
 
 
 
