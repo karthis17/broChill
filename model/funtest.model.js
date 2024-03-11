@@ -49,6 +49,8 @@ module.exports = mongoose.model('FunTest', {
         },
     }],
 
+    isActive: { type: Boolean, default: false },
+    views: { type: Number, default: 0 },
 
     thumbnail: String,
     referenceImage: String,

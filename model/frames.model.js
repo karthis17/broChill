@@ -18,6 +18,9 @@ module.exports = mongoose.model("frames", {
     }],
     thumbnail: { type: String, required: true },
     referenceImage: { type: String, required: true },
+    isActive: { type: Boolean, default: false },
+    views: { type: Number, default: 0 },
+
 
     createdAt: { type: Date, default: Date.now() }
 

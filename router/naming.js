@@ -14,7 +14,7 @@ const cpUpload = uploadFile.fields([
 
 router.post('/add', auth, adminRole, cpUpload, async (req, res) => {
 
-    let { description, language, frames, percentageTexts, facts, meanings, type } = req.body;
+    let { description, isActive, language, frames, percentageTexts, facts, meanings, type } = req.body;
 
     if (frames) {
         frames = JSON.parse(frames);
@@ -50,7 +50,7 @@ router.post('/add', auth, adminRole, cpUpload, async (req, res) => {
 
 
     try {
-        const result = await Nameing.create({ description, language, frames, percentageTexts, facts, meanings, category: type, user: req.user.id, thumbnail });
+        const result = await Nameing.create({ description, isActive, language, frames, percentageTexts, facts, meanings, category: type, user: req.user.id, thumbnail });
 
 
         const Language = await Category.findById(result.language);
@@ -96,7 +96,7 @@ router.post("/calculate-love/:postId", async (req, res) => {
 
         const randomNumber = Math.floor(Math.random() * 100 + 1);
 
-        const text = await result.percentageTexts.filter(ress => {
+        let text = await result.percentageTexts.filter(ress => {
 
             if (ress.minPercentage <= randomNumber && ress.maxPercentage >= randomNumber) {
                 return ress.text;
@@ -163,13 +163,10 @@ router.post("/calculate-friendship/:postId", async (req, res) => {
 
         const randomNumber = Math.floor(Math.random() * 100 + 1);
 
-        const text = await result.percentageTexts.filter(ress => {
-
-            if (ress.minPercentage <= randomNumber && ress.maxPercentage >= randomNumber) {
-                return ress.text;
-            }
-        });
+        const text = await result.percentageTexts.find(ress => ress.minPercentage <= randomNumber && ress.maxPercentage >= randomNumber);
         let frame = await result.frames[0];
+
+        console.log(text, "jkshd");
 
         if (result.frames.length > 1) {
             frame = await result.frames[Math.floor(Math.random() * result.frames.length)];
@@ -192,7 +189,7 @@ router.post("/calculate-friendship/:postId", async (req, res) => {
         let cood = [{
 
             coordinate: textCoord,
-            text: text[0].text
+            text: text.text[Math.floor(Math.random(text.text.length))]
         }, {
 
             coordinate: percentageCoord,
@@ -346,7 +343,10 @@ router.post('/name-meaning/:id', async (req, res) => {
 
         console.log(name.length)
 
-        const mean = [...name.toLowerCase()].map(char => result.meanings.find(nam => nam.letter.toLowerCase().trim() === char));
+        let mean = [...name.toLowerCase()].map(char => result.meanings.find(nam => nam.letter.toLowerCase().trim() === char));
+
+        console.log(mean)
+        mean.meaning = mean.meaning[Math.floor(Math.random(mean.meaning.length))]
 
         res.send(mean);
 
@@ -415,11 +415,22 @@ router.post('/:postId/like', auth, async (req, res) => {
 
 
 
-router.post('/share', async (req, res) => {
+router.get('/share/:id', async (req, res) => {
     try {
-        const response = await Nameing.findByIdAndUpdate(req.body.id, { $inc: { shares: 1 } }, { new: true })
+        const postId = req.params.id;
+        const response = await Nameing.findByIdAndUpdate(postId, { $inc: { shares: 1 } }, { new: true })
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 
+router.get('/view/:id', async (req, res) => {
 
+    const id = req.params.id;
+
+    try {
+        const response = await Nameing.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
         res.json(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });

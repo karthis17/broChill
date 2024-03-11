@@ -8,7 +8,7 @@ const Category = require('../model/categoryModel');
 
 router.post('/upload-reel', auth, adminRole, uploadFile.single('reel'), async (req, res) => {
 
-    const { language, description, category, title } = req.body;
+    const { language, description, category, title, isActive } = req.body;
 
     try {
         if (!req.file) {
@@ -19,7 +19,7 @@ router.post('/upload-reel', auth, adminRole, uploadFile.single('reel'), async (r
         if (!description) {
             return res.status(400).json({ message: 'Description is required' });
         }
-        const reel = await reels.create({ category, title, fileUrl, user: req.user.id, language, description });
+        const reel = await reels.create({ category, title, fileUrl, user: req.user.id, language, isActive, description });
 
         const Language = await Category.findById(reel.language);
         if (!Language) {
@@ -169,10 +169,22 @@ router.post('/:postId/like', auth, async (req, res) => {
 
 
 
-router.post('/share', async (req, res) => {
+router.get('/share/:id', async (req, res) => {
     try {
-        const response = await reels.findByIdAndUpdate(req.body.reelId, { $inc: { shares: 1 } }, { new: true })
+        const postId = req.params.id;
+        const response = await reels.findByIdAndUpdate(postId, { $inc: { shares: 1 } }, { new: true })
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 
+router.get('/view/:id', async (req, res) => {
+
+    const id = req.params.id;
+
+    try {
+        const response = await reels.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
         res.json(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });

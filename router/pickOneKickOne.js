@@ -20,7 +20,7 @@ const cpUplad = uploadFile.fields([{
 
 router.post('/add-question', auth, adminRole, cpUplad, async (req, res) => {
 
-    let { questions, language, description } = req.body;
+    let { questions, isActive, language, description } = req.body;
 
     if (questions) {
         questions = JSON.parse(questions)
@@ -32,8 +32,8 @@ router.post('/add-question', auth, adminRole, cpUplad, async (req, res) => {
     for (let k = 0; k < questions.length; k++) {
         const question = questions[k];
 
-        if (question.questionType === 'image') {
-            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        if (question.questionType === 'image' || question.questionType === 'both') {
+            questions[k]["imageQuestion"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
         }
 
         if (question.optionType === 'image') {
@@ -53,7 +53,7 @@ router.post('/add-question', auth, adminRole, cpUplad, async (req, res) => {
         console.log(req.files["referencesImage"])
         let referencesImage = await uploadAndGetFirebaseUrl(req.files['referencesImage'][0])
 
-        const result = await pickAndKick.create({ questions, thumbnail: referencesImage, language, description, user: req.user.id });
+        const result = await pickAndKick.create({ questions, thumbnail: referencesImage, isActive, language, description, user: req.user.id });
         const Language = await Category.findById(result.language);
         if (!Language) {
             return res.status(404).send({ success: false, error: 'Language not found' });
@@ -210,5 +210,45 @@ router.put("/update", auth, adminRole, uploadFile.single('question'), async (req
 
     }
 });
+
+router.get('/share/:id', async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const response = await pickAndKick.findByIdAndUpdate(postId, { $inc: { shares: 1 } }, { new: true })
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.get('/view/:id', async (req, res) => {
+
+    const id = req.params.id;
+
+    try {
+        const response = await pickAndKick.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.post('/add-comment', auth, async (req, res) => {
+    if (!req.body.riddle_id) res.status(404).json({ message: 'riddle id is required' });
+
+    if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
+
+    try {
+        const response = await pickAndKick.findByIdAndUpdate(req.body.riddle_id, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true })
+        res.status(200).json({
+            message: "comment added successfully",
+            data: response
+        })
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 
 module.exports = router;

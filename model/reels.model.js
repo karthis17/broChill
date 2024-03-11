@@ -10,11 +10,16 @@ module.exports = mongoose.model("reel", {
     likes: [{
         type: mongoose.Schema.Types.ObjectId, ref: 'User'
     }],
+
+    isActive: { type: Boolean, default: false },
+
     comments: [{
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         text: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
+    views: { type: Number, default: 0 },
+
     shares: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
 });

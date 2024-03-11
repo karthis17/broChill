@@ -17,7 +17,7 @@ const cpUpload = uploadFile.fields([
 router.post("/add-riddle", auth, adminRole, cpUpload, async (req, res) => {
 
 
-    let { questions, description, language, category, subCategory } = req.body;
+    let { questions, description, language, category, subCategory, isActive } = req.body;
 
     console.log(req.body)
 
@@ -53,7 +53,7 @@ router.post("/add-riddle", auth, adminRole, cpUpload, async (req, res) => {
 
 
     try {
-        const qu = await riddles.create({ questions, description, referenceImage: referencesImage, category, subCategory, language, user: req.user.id });
+        const qu = await riddles.create({ questions, description, referenceImage: referencesImage, isActive, category, subCategory, language, user: req.user.id });
         const Language = await Category.findById(qu.language);
         if (!Language) {
             return res.status(404).send({ success: false, error: 'Language not found' });
@@ -100,6 +100,15 @@ router.get('/get-all', async (req, res) => {
     }
 });
 
+
+router.get('/all', async (req, res) => {
+    try {
+        const result = await riddles.find();
+        res.json(result);
+    } catch (error) {
+        res.status(500).json(error.message);
+    }
+});
 
 
 
@@ -187,32 +196,135 @@ router.delete('/delete/:id', auth, async (req, res) => {
 
 });
 
-router.post('/share', async (req, res) => {
+router.get('/share/:id', async (req, res) => {
     try {
-        const response = await riddles.findByIdAndUpdate(req.body.reelId, { $inc: { shares: 1 } }, { new: true })
-
+        const postId = req.params.id;
+        const response = await riddles.findByIdAndUpdate(postId, { $inc: { shares: 1 } }, { new: true })
         res.json(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
-router.put('/update', auth, adminRole, async (req, res) => {
+router.get('/view/:id', async (req, res) => {
 
-    const { question, answer, riddle_id } = req.body;
-
-
-    if (!question || !answer) {
-        return res.status(404).json({ error: " Please provide a question or answer." });
-    }
+    const id = req.params.id;
 
     try {
-        const ress = await riddles.findByIdAndUpdate(riddle_id, { $set: { question, answer } })
-        res.json(ress);
+        const response = await riddles.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
+        res.json(response);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+
+
+const cpUpload1 = uploadFile.fields([
+    { name: 'question', maxCount: 20 },
+    { name: 'option', maxCount: 50 },
+    { name: 'answer', maxCount: 20 },
+    { name: 'referencesImage', maxCount: 2 }
+]);
+
+router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
+
+    let { questions, description, language, category, subCategory, id, isActive } = req.body;
+
+    console.log(req.body)
+
+    if (questions) {
+
+        questions = JSON.parse(questions)
+        console.log(questions)
     }
 
+
+
+    let i = 0;
+    let j = 0;
+    for (let k = 0; k < questions.length; k++) {
+        const question = questions[k];
+        console.log(question);
+        if (question.questionType === 'image' && (typeof question.question === 'object' && Object.keys(question.question).length === 0)) {
+
+            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        }
+
+        if (question.optionType === 'image') {
+            // Sequentially process options
+            for (let n = 0; n < question.options.length; n++) {
+                const option = question.options[n];
+                if (typeof option.option === 'object' && Object.keys(option.option).length === 0) {
+
+                    questions[k]["options"][n].option = await uploadAndGetFirebaseUrl(req.files["option"][j++]);
+                }
+            }
+        }
+    }
+
+
+    let referencesImage = req.body.referenceImage
+
+    try {
+
+        referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
+    } catch (e) {
+        console.log(e)
+    }
+
+
+    try {
+        const qu = await riddles.create({ questions, description, referenceImage: referencesImage, category, subCategory, language, user: req.user.id });
+        const Language = await Category.findById(qu.language);
+        if (!Language) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.riddles.push(qu._id);
+        const savedCategory = await Language.save();
+
+
+
+        res.send(qu);
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+
+
+});
+
+router.get('/publish/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await riddles.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+router.get('/draft/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await riddles.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
 });
 
 module.exports = router;

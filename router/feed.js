@@ -14,7 +14,7 @@ router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (r
         const fileUrl = await uploadAndGetFirebaseUrl(req)
         console.log(req.file)
 
-        let { description, category, title, language } = req.body;
+        let { description, category, title, language, isActive } = req.body;
 
 
 
@@ -30,7 +30,7 @@ router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (r
 
         // const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
         // const imagePath = req.file.path;
-        const feed = await feeds.create({ category, title, imageUrl: fileUrl, description, user: req.user.id, language });
+        const feed = await feeds.create({ category, title, imageUrl: fileUrl, description, isActive, user: req.user.id, language });
         console.log(feed);
         const Language = await Category.findById(feed.language);
         if (!category) {
@@ -134,28 +134,34 @@ router.get('/category/:id', async (req, res) => {
 router.get("/get-all", async (req, res) => {
     const lang = req.query.lang;
     try {
-        const feed = await feeds.find().populate('comments.user');
+        const feed = await feeds.find({ language: lang }).populate({
+            path: 'user',
+            select: -password
+        }).populate({
+            path: 'comments',
+            populate: {
+                psth: 'user',
+                select: -password
+            }
+        })
 
-        if (lang && lang.toLowerCase() !== "english") {
-            let result = await feed.filter(feed => {
-                const title = feed.titleDifLang.find(tit => tit.lang === lang);
-                const description = feed.descriptionDifLang.find(dis => dis.lang === lang);
-                // If title or description is found in the specified language, use its text, otherwise fallback to default
 
-                if (title) {
-                    feed.title = title.text;
-                    feed.description = description.text;
-                    return feed;
-                } else {
-                    return false
-                }
-            });
-            res.json(result);
-        } else {
-            res.json(feed);
-        }
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+
+
+router.get("/all", async (req, res) => {
+    try {
+
+        const result = await feeds.find();
+
+        res.send(result);
+    } catch (error) {
+
+        res.status(500).json({ message: error.message });
+
     }
 });
 
@@ -191,9 +197,22 @@ router.post('/:postId/like', auth, async (req, res) => {
 });
 
 
-router.post('/share', async (req, res) => {
+router.get('/share/:id', async (req, res) => {
     try {
-        const response = await feeds.findByIdAndUpdate(req.body.feedId, { $inc: { shares: 1 } }, { new: true })
+        const feedId = req.params.id;
+        const response = await feeds.findByIdAndUpdate(feedId, { $inc: { shares: 1 } }, { new: true })
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.get('/view/:id', async (req, res) => {
+
+    const id = req.params.id;
+
+    try {
+        const response = await feeds.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
         res.json(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });

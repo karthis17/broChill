@@ -8,8 +8,8 @@ module.exports = mongoose.model("riddle", {
 
 
     questions: [{
-
-        question: { type: String, required: true },
+        textQuestion: { type: String, required: true },
+        imageQusetion: { type: String, required: true },
         questionType: { type: String, required: true },
         optionType: String,
         options: [{
@@ -28,6 +28,7 @@ module.exports = mongoose.model("riddle", {
     category: String,
     subCategory: String,
 
+    isActive: { type: Boolean, default: false },
 
 
     referenceImage: { type: String },
@@ -43,6 +44,7 @@ module.exports = mongoose.model("riddle", {
         createdAt: { type: Date, default: Date.now }
     }],
     shares: { type: Number, default: 0 },
+    views: { type: Number, default: 0 },
 
     createdAt: { type: Date, default: Date.now }
 });

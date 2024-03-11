@@ -13,6 +13,9 @@ module.exports = mongoose.model("feed", {
         text: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
+    isActive: { type: Boolean, default: false },
+    views: { type: Number, default: 0 },
+
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
     createdAt: { type: Date, default: Date.now },
 });

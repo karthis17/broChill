@@ -19,9 +19,18 @@ const cpUpload = uploadFile.fields([
 ]);
 
 
+router.get("/all", async (req, res) => {
+    try {
+        const result = await Quizzes.find();
+        res.send(result)
+    } catch (error) {
+        res.status(500).send(error.message)
+    }
+})
+
 router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
-    let { questions, results, description, language, category, subCategory } = req.body;
+    let { questions, results, description, language, category, subCategory, isActive } = req.body;
 
     console.log(req.body)
 
@@ -35,8 +44,8 @@ router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
     for (let k = 0; k < questions.length; k++) {
         const question = questions[k];
 
-        if (question.questionType === 'image') {
-            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        if (question.questionType === 'image' || question.questionType === 'both') {
+            questions[k]["imageQuestion"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
         }
 
         if (question.optionType === 'image') {
@@ -57,7 +66,7 @@ router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
     try {
         let referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
 
-        const qu = await Quizzes.create({ questions, results, description, referenceImage: referencesImage, category, subCategory, language, user: req.user.id });
+        const qu = await Quizzes.create({ questions, results, description, referenceImage: referencesImage, category, subCategory, isActive, language, user: req.user.id });
         const Language = await Category.findById(qu.language);
         if (!Language) {
             return res.status(404).send({ success: false, error: 'Language not found' });
@@ -81,7 +90,7 @@ router.get('/get-all', async (req, res) => {
 
     let lang = req.query.lang;
     try {
-        const fanquizzes = await Quizzes.find({ language: lang }).populate({
+        const fanquizzes = await Quizzes.find({ language: lang, isActive: true }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -91,7 +100,6 @@ router.get('/get-all', async (req, res) => {
                 select: '-password'
             }
         });
-        console.log(fanquizzes);
         res.json(fanquizzes);
     } catch (error) {
         res.status(500).json(error.message);
@@ -251,9 +259,9 @@ router.post('/:postId/like', auth, async (req, res) => {
 
 
 
-router.post('/share', async (req, res) => {
+router.get('/share/:id', async (req, res) => {
     try {
-        const response = await Quizzes.findByIdAndUpdate(req.body.id, { $inc: { shares: 1 } }, { new: true })
+        const response = await Quizzes.findByIdAndUpdate(req.params.id, { $inc: { shares: 1 } }, { new: true })
 
 
         res.json(response);
@@ -334,26 +342,123 @@ async function applyMask(baseImagePath, maskImages, outputPath, texts, scoreCoor
     }
 }
 
+router.get('/view/:id', async (req, res) => {
+    try {
+        const response = await Quizzes.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } }, { new: true });
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+const cpUpload1 = uploadFile.fields([
+    { name: 'question', maxCount: 20 },
+    { name: 'option', maxCount: 50 },
+    { name: 'answer', maxCount: 20 },
+    { name: 'referencesImage', maxCount: 2 }
+]);
 
 
-router.put('/update', auth, adminRole, async (req, res) => {
-    const { id, question, options } = req.body;
-    if (!question) {
-        return res.status(404).json({ error: "question not found" });
+
+router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
+
+
+    let { questions, results, description, language, category, subCategory, referencesImage, id, isActive } = req.body;
+
+    if (!questions) {
+        res.status(404).send({ message: "questions not found", success: false });
     }
 
-    if (!Array.isArray(options)) {
-        return res.status(404).json({ error: "option must be array with contain option and answer object" });
 
+    questions = JSON.parse(questions);
+
+    if (results) {
+
+        results = JSON.parse(results)
+    }
+
+
+    let i = 0;
+    let j = 0;
+    for (let k = 0; k < questions.length; k++) {
+        const question = questions[k];
+        console.log(question);
+        if (question.questionType === 'image' && (typeof question.question === 'object' && Object.keys(question.question).length === 0)) {
+
+            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        }
+
+        if (question.optionType === 'image') {
+            // Sequentially process options
+            for (let n = 0; n < question.options.length; n++) {
+                const option = question.options[n];
+                if (typeof option.option === 'object' && Object.keys(option.option).length === 0) {
+
+                    questions[k]["options"][n].option = await uploadAndGetFirebaseUrl(req.files["option"][j++]);
+                }
+            }
+        }
+    }
+
+    // Sequentially process results
+    if (resultImage && results) {
+        for (let m = 0; m < results.length; m++) {
+            if (typeof results.resultImg === 'object' && Object.keys(results.resultImg).length === 0) {
+
+                results[m].resultImg = await uploadAndGetFirebaseUrl(req.files["answer"][m]);
+            }
+        }
+
+    }
+    try {
+
+        referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
+    } catch (e) {
+        console.log(e)
     }
 
     try {
-        const ress = await Quizzes.findByIdAndUpdate(id, { $set: { question, options } });
+        const ress = await Quizzes.findByIdAndUpdate(id, { $set: { questions, results, description, language, category, isActive, subCategory, referencesImage } });
 
         res.json(ress);
     } catch (error) {
 
         res.status(500).json({ error: error.message });
+
+    }
+});
+
+
+router.get('/publish/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await Quizzes.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+router.get('/draft/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await Quizzes.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
 
     }
 });

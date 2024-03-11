@@ -8,11 +8,16 @@ const optionSchema = new mongoose.Schema({
 
 const pollSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
-    question: { type: String, required: true },
+    textQuestion: { type: String, },
+    imageQuestion: { type: String, },
     description: { type: String, required: true },
     questionType: { type: String, required: true },
     optionType: { type: String, required: true },
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
+
+    isActive: { type: Boolean, default: false },
+    views: { type: Number, default: 0 },
+
 
     options: [optionSchema],
     thumbnail: { type: String },

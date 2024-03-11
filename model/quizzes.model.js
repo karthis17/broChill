@@ -9,7 +9,8 @@ module.exports = mongoose.model("quizzes", {
 
     questions: [{
 
-        question: { type: String, required: true },
+        textQuestion: { type: String, },
+        imageQuestion: { type: String },
         questionType: { type: String, required: true },
         optionType: String,
         options: [{
@@ -40,6 +41,9 @@ module.exports = mongoose.model("quizzes", {
         noOfTexts: [],
     }],
 
+    isActive: { type: Boolean, default: false },
+
+
     referenceImage: { type: String },
 
     description: { type: String, required: true },
@@ -53,6 +57,8 @@ module.exports = mongoose.model("quizzes", {
         createdAt: { type: Date, default: Date.now }
     }],
     shares: { type: Number, default: 0 },
+    views: { type: Number, default: 0 },
+
 
     createdAt: { type: Date, default: Date.now }
 });

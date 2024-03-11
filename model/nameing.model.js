@@ -60,7 +60,7 @@ module.exports = mongoose.model('nameing', {
         {
             minPercentage: { type: Number },
             maxPercentage: { type: Number },
-            text: { type: String, }
+            text: [{ type: String }]
         }
     ],
 
@@ -68,11 +68,16 @@ module.exports = mongoose.model('nameing', {
         fact: String,
         gender: String,
     }],
+    views: { type: Number, default: 0 },
+
 
     meanings: [{
         letter: String,
-        meaning: String,
+        meaning: [{ type: String }],
     }],
+
+    isActive: { type: Boolean, default: false },
+
 
     category: { type: String, required: true },
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },

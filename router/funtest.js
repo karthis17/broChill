@@ -19,7 +19,7 @@ const cpUpload1 = uploadFile.fields([{ name: 'frame', maxCount: 3 }
 router.post("/add-question", auth, adminRole, cpUpload1, async (req, res) => {
 
 
-    let { question, texts, frames, description, language, type, noOfUserImage, range } = req.body;
+    let { question, texts, frames, isActive, description, language, type, noOfUserImage, range } = req.body;
 
     if (texts) {
         texts = JSON.parse(texts);
@@ -69,7 +69,7 @@ router.post("/add-question", auth, adminRole, cpUpload1, async (req, res) => {
 
 
 
-        const ress = await FunTest.create({ question, texts, description, language, frames, thumbnail, referenceImage, range, noOfUserImage, category: type, user: req.user.id });
+        const ress = await FunTest.create({ question, isActive, texts, description, language, frames, thumbnail, referenceImage, range, noOfUserImage, category: type, user: req.user.id });
 
         const Language = await Category.findById(ress.language);
         if (!Language) {
@@ -354,16 +354,29 @@ router.post('/:postId/like', auth, async (req, res) => {
 
 
 
-router.post('/share', async (req, res) => {
+router.get('/share/:id', async (req, res) => {
     try {
-        const response = await FunTest.findByIdAndUpdate(req.body.id, { $inc: { shares: 1 } }, { new: true })
-
-
+        const postId = req.params.id;
+        const response = await FunTest.findByIdAndUpdate(postId, { $inc: { shares: 1 } }, { new: true })
         res.json(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
+router.get('/view/:id', async (req, res) => {
+
+    const id = req.params.id;
+
+    try {
+        const response = await FunTest.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+
 
 router.post('/add-comment', auth, async (req, res) => {
     if (!req.body.id) res.status(404).json({ message: 'id is required' });

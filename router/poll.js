@@ -149,21 +149,19 @@ router.post('/:pollId/vote', auth, async (req, res) => {
 // });
 
 const cpUpload1 = uploadFile.fields([
-    { name: 'question', maxCount: 1 },
+    { name: 'imageQuestion', maxCount: 1 },
     { name: 'thumbnail', maxCount: 1 },
     { name: 'option', maxCount: 10 }
 ]);
 
 
 router.post('/add-poll', auth, adminRole, cpUpload1, async (req, res) => {
-    let { question, options, description, language, questionType, optionType } = req.body;
+    let { textQuestion, options, isActive, description, language, questionType, optionType } = req.body;
     console.log(req.body, req.file)
 
-    let qn;
-    if (req.files['question']) {
-        qn = await uploadAndGetFirebaseUrl(req.files['question'][0]);
-    } else {
-        qn = question;
+    let imageQuestion = "";
+    if (req.files['imageQuestion']) {
+        imageQuestion = await uploadAndGetFirebaseUrl(req.files['imageQuestion'][0]);
     }
 
 
@@ -192,7 +190,7 @@ router.post('/add-poll', auth, adminRole, cpUpload1, async (req, res) => {
 
 
     try {
-        const poll = await Poll.create({ question: qn, options: optionsArray, thumbnail, description, language, user: req.user.id, questionType, optionType });
+        const poll = await Poll.create({ textQuestion, isActive, imageQuestion, options: optionsArray, thumbnail, description, language, user: req.user.id, questionType, optionType });
 
         const Language = await Category.findById(poll.language);
         if (!Language) {
@@ -291,16 +289,25 @@ router.post('/add-comment', auth, async (req, res) => {
     }
 });
 
-router.post('/share', async (req, res) => {
+router.get('/share/:id', async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const response = await Poll.findByIdAndUpdate(postId, { $inc: { shares: 1 } }, { new: true })
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 
-    if (!req.body.pollId) res.status(404).json({ message: 'Poll id is required' });
+router.get('/view/:id', async (req, res) => {
+
+    const id = req.params.id;
 
     try {
-        const response = await Poll.findByIdAndUpdate(req.body.pollId, { $inc: { shares: 1 } }, { new: true });
-        res.status(200).json(response);
+        const response = await Poll.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
+        res.json(response);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 

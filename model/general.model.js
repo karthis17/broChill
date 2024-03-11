@@ -8,7 +8,8 @@ module.exports = mongoose.model("generalQuestion", {
 
     questions: [{
 
-        question: { type: String, required: true },
+        textQuestion: { type: String },
+        imageQuestion: { type: String },
         questionType: { type: String, required: true },
         optionType: String,
         options: [{
@@ -17,6 +18,7 @@ module.exports = mongoose.model("generalQuestion", {
         }]
 
     }],
+    views: { type: Number, default: 0 },
 
     resultImage: { type: Boolean, required: true, default: false },
 
@@ -51,6 +53,7 @@ module.exports = mongoose.model("generalQuestion", {
         createdAt: { type: Date, default: Date.now }
     }],
     shares: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: false },
 
     createdAt: { type: Date, default: Date.now }
 

@@ -19,7 +19,7 @@ const cpUpload = uploadFile.fields([
 
 router.post('/add-question', auth, adminRole, cpUpload, async (req, res) => {
 
-    let { questions, results, description, language, resultImage, category, subCategory } = req.body;
+    let { questions, results, description, language, resultImage, isActive, category, subCategory } = req.body;
 
     console.log(req.body)
 
@@ -37,8 +37,8 @@ router.post('/add-question', auth, adminRole, cpUpload, async (req, res) => {
     for (let k = 0; k < questions.length; k++) {
         const question = questions[k];
 
-        if (question.questionType === 'image') {
-            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        if (question.questionType === 'image' || question.questionType === 'both') {
+            questions[k]["imageQuestion"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
         }
 
         if (question.optionType === 'image') {
@@ -62,7 +62,7 @@ router.post('/add-question', auth, adminRole, cpUpload, async (req, res) => {
 
 
     try {
-        const qu = await general.create({ questions, results, description, referenceImage: referencesImage, language, resultImage, user: req.user.id });
+        const qu = await general.create({ questions, results, description, isActive, referenceImage: referencesImage, language, resultImage, user: req.user.id });
         const category = await Category.findById(qu.language);
         if (!category) {
             return res.status(404).send({ success: false, error: 'Language not found' });
@@ -231,11 +231,22 @@ router.post('/:postId/like', auth, async (req, res) => {
 
 
 
-router.post('/share', async (req, res) => {
+router.get('/share/:id', async (req, res) => {
     try {
-        const response = await general.findByIdAndUpdate(req.body.id, { $inc: { shares: 1 } }, { new: true })
+        const postId = req.params.id;
+        const response = await general.findByIdAndUpdate(postId, { $inc: { shares: 1 } }, { new: true })
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 
+router.get('/view/:id', async (req, res) => {
 
+    const id = req.params.id;
+
+    try {
+        const response = await general.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
         res.json(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });

@@ -19,7 +19,7 @@ const cpUpload1 = uploadFile.fields([
 router.post('/upload-frame', auth, adminRole, cpUpload1, async (req, res) => {
 
 
-    let { frameName, description, language } = req.body;
+    let { frameName, description, language, isActive } = req.body;
 
 
     if (!req.files['frame']) {
@@ -41,7 +41,7 @@ router.post('/upload-frame', auth, adminRole, cpUpload1, async (req, res) => {
         let thumbnail = await uploadAndGetFirebaseUrl(req.files['thumbnail'][0]);
         let referenceImage = await uploadAndGetFirebaseUrl(req.files['referenceImage'][0]);
 
-        const results = await Frames.create({ frameName, frameUrl, thumbnail, referenceImage, description, language, user: req.user.id });
+        const results = await Frames.create({ frameName, frameUrl, thumbnail, referenceImage, isActive, description, language, user: req.user.id });
 
         const Language = await Category.findById(results.language);
         if (!Language) {
@@ -130,19 +130,27 @@ router.post('/add-comment', auth, async (req, res) => {
     }
 });
 
-router.post('/share', async (req, res) => {
-
-    if (!req.body.frame_id) res.status(404).json({ message: 'Poll id is required' });
-
+router.get('/share/:id', async (req, res) => {
     try {
-        const response = await Frames.findByIdAndUpdate(req.body.frame_id, { $inc: { shares: 1 } }, { new: true });
-        res.status(200).json({ success: true });
+        const feedId = req.params.id;
+        const response = await Frames.findByIdAndUpdate(feedId, { $inc: { shares: 1 } }, { new: true })
+        res.json(response);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 
+router.get('/view/:id', async (req, res) => {
+
+    const id = req.params.id;
+
+    try {
+        const response = await Frames.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 router.get('/get/:id', async (req, res) => {
     const lang = req.query.lang;
 

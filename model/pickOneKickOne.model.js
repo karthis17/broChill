@@ -11,7 +11,8 @@ module.exports = mongoose.model("pickKick", {
 
     questions: [{
 
-        question: { type: String, required: true },
+        textQuestion: { type: String },
+        imageQuestion: { type: String },
         questionType: { type: String, required: true },
         optionType: String,
         options: [{
@@ -23,6 +24,9 @@ module.exports = mongoose.model("pickKick", {
         totalVotes: { type: Number, default: 0 }
     }],
 
+    isActive: { type: Boolean, default: false },
+
+
     likes: [{
         type: mongoose.Schema.Types.ObjectId, ref: 'User'
     }],
@@ -31,6 +35,8 @@ module.exports = mongoose.model("pickKick", {
         text: { type: String, required: true },
         createdAt: { type: Date, default: Date.now }
     }],
+    views: { type: Number, default: 0 },
+
     shares: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
 });
