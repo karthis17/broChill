@@ -76,58 +76,15 @@ router.get('/get-feed/:id', async (req, res) => {
 
 });
 
-// router.get('/category/:id', async (req, res) => {
-//     try {
-//         const ress = await feeds.find({ category: req.params.id });
-//         console.log(ress);
-//         res.json(ress);
-//     } catch (error) {
-//         res.status(500).json({ error: error.message });
-//     }
-// });
 
-
-
-router.get('/category/:id', async (req, res) => {
-
-    const lang = req.query.lang
-
+router.get("/category/:category", async (req, res) => {
     try {
-        const ress = await feeds.find({ category: req.params.id }).populate('comments.user');
-
-
-        if (lang) {
-
-            let balance = []
-
-            let result = await ress.filter(feed => {
-                const title = feed.titleDifLang.find(tit => tit.lang === lang);
-                const description = feed.descriptionDifLang.find(dis => dis.lang === lang);
-
-                feed.title = title ? title.text : feed.title;
-                feed.description = description ? description.text : feed.title;
-
-                if (title || description) {
-
-                    return feed;
-                } else {
-                    balance.push(feed);
-                    return false;
-                }
-
-            });
-
-            res.json([...result, ...balance]);
-        } else {
-
-            res.json(ress);
-        }
-
+        const data = await feeds.find({ category: req.params.category });
+        res.send(data);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: 'Internal server error:' + error });
     }
 });
-
 
 
 
@@ -145,7 +102,7 @@ router.get("/get-all", async (req, res) => {
             }
         })
 
-
+        res.send(feed);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -257,7 +214,7 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 router.put("/update", auth, adminRole, uploadFile.single("new_feed"), async (req, res) => {
 
     console.log(req.body)
-    let { description, category, title, id, imageUrl } = req.body;
+    let { description, category, title, language, isActive, id, imageUrl } = req.body;
     try {
         if (req.file) {
             imageUrl = await uploadAndGetFirebaseUrl(req)
@@ -270,7 +227,7 @@ router.put("/update", auth, adminRole, uploadFile.single("new_feed"), async (req
             return res.status(400).json({ message: 'Description is required' });
         }
 
-        const feed = await feeds.findByIdAndUpdate(id, { $set: { category, title, imageUrl, description } });
+        const feed = await feeds.findByIdAndUpdate(id, { $set: { category, title, imageUrl, description, language, isActive } });
         console.log(feed);
 
         res.status(201).json(feed);
@@ -279,6 +236,69 @@ router.put("/update", auth, adminRole, uploadFile.single("new_feed"), async (req
         res.status(500).json({ message: 'Internal server error' });
     }
 
+});
+
+
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
+
+    const id = req.params.id;
+
+    const feed = await feeds.findById(id);
+
+    if (!feed) {
+        return res.status(404).json({ message: 'feed not found' });
+    }
+
+    try {
+        // Delete the file from Firebase Storage
+        const fileUrl = feed.imageUrl;
+        const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
+        await bucket.file(fileName).delete();
+
+        // Delete the feed from the database
+        await feeds.deleteOne(id);
+
+        res.send({ message: 'File deleted successfully', success: true });
+    } catch (err) {
+        res.status(500).send({ message: err.message, success: false });
+    }
+});
+
+
+
+
+router.get('/publish/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await feeds.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+router.get('/draft/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await feeds.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
 });
 
 module.exports = router;

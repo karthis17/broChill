@@ -7,7 +7,8 @@ module.exports = mongoose.model("contest", {
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
 
     isActive: { type: Boolean, default: false },
-
+    category: String,
+    subCategory: String,
 
     questions: [{
 

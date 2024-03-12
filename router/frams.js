@@ -67,7 +67,7 @@ router.get('/get-all', async function (req, res) {
 
 
     try {
-        const data = await Frames.find({ language: lang }).populate({
+        const data = await Frames.find({ language: lang, isActive: true }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -238,5 +238,38 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
 
 
+router.get('/publish/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await pickAndKick.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+router.get('/draft/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await pickAndKick.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
 
 module.exports = router;

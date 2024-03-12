@@ -38,68 +38,42 @@ router.post('/upload-reel', auth, adminRole, uploadFile.single('reel'), async (r
 
 
 
-
-router.get('/category/:id', async (req, res) => {
-
-    const lang = req.query.lang
-
+router.get("/category/:category", async (req, res) => {
     try {
-        const ress = await reels.find({ category: req.params.id }).populate('comments.user');
-
-
-        if (lang) {
-
-            let balance = []
-
-            let result = await ress.filter(reel => {
-                const title = reel.titleDifLang.find(tit => tit.lang === lang);
-                const description = reel.descriptionDifLang.find(dis => dis.lang === lang);
-
-                reel.title = title ? title.text : reel.title;
-                reel.description = description ? description.text : reel.title;
-
-                if (title || description) {
-
-                    return reel;
-                } else {
-                    balance.push(reel);
-                    return false;
-                }
-
-            });
-
-            res.json([...result, ...balance]);
-        } else {
-
-            res.json(ress);
-        }
-
+        const data = await reels.find({ category: req.params.category });
+        res.send(data);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: 'Internal server error:' + error });
     }
 });
 
+
+router.get("/all", async (req, res) => {
+    try {
+        res.send(await reels.find());
+    } catch (error) {
+
+        res.status(500).json({ message: 'Internal server error:' + error });
+    }
+});
 
 router.get('/get-reel/:id', async (req, res) => {
 
     const lang = req.query.lang;
 
     try {
-        const reel = await reels.findById(req.params.id).populate('comments.user');
+        const reel = await reels.findById(req.params.id).populate({
+            path: 'user',
+            select: -password
+        }).populate({
+            path: 'comments',
+            populate: {
+                psth: 'user',
+                select: -password
+            }
+        })
 
-        if (lang) {
-            const title = reel.titleDifLang.find(tit => tit.lang === lang);
-            const description = reel.descriptionDifLang.find(dis => dis.lang === lang);
 
-            reel.title = title ? title.text : reel.title;
-            reel.description = description ? description.text : reel.title;
-
-
-            res.json(reel);
-        } else {
-
-            res.json(reel);
-        }
         res.send(reel)
     } catch (error) {
         res.status(500).json({ message: 'Internal server error', err: error.message });
@@ -108,32 +82,20 @@ router.get('/get-reel/:id', async (req, res) => {
 });
 
 router.get("/get-all", async (req, res) => {
+    const lang = req.query.lang;
     try {
-        const lang = req.query.lang;
+        const feed = await reels.find({ language: lang, isActive: true }).populate({
+            path: 'user',
+            select: -password
+        }).populate({
+            path: 'comments',
+            populate: {
+                psth: 'user',
+                select: -password
+            }
+        })
 
-        const reelsData = await reels.find().populate('comments.user');
-
-        if (lang) {
-            let result = await reelsData.map(reel => {
-                const title = reel.titleDifLang.find(tit => tit.lang === lang);
-                const description = reel.descriptionDifLang.find(dis => dis.lang === lang);
-
-                // If title or description is found in the specified language, use its text, otherwise fallback to default
-                if (title) {
-                    reel.title = title.text;
-                    reel.description = description.text;
-                    return reel;
-                } else {
-                    return false;
-                }
-
-            });
-
-            res.json(result);
-        } else {
-
-            res.json(reelsData);
-        }
+        res.send(feed);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -209,27 +171,39 @@ router.post('/add-comment', auth, async (req, res) => {
 
 });
 
-router.delete('/delete/:reelId', auth, adminRole, async (req, res) => {
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
+
+    const id = req.params.id;
+
+    const reel = await reels.findById(id);
+
+    if (!reel) {
+        return res.status(404).json({ message: 'Reel not found' });
+    }
 
     try {
-        const reel = await reels.findById(req.params.reelId);
-        await reels.deleteOne({ _id: await reel._id });
-        return res.status(200).json({ message: "record deleted successfully" });
-    }
-    catch (error) {
-        return res.status(500).json({ message: error.message, success: false });
+        // Delete the file from Firebase Storage
+        const fileUrl = reel.fileUrl;
+        const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
+        await bucket.file(fileName).delete();
 
-    }
+        // Delete the reel from the database
+        await reels.deleteOne(id);
 
+        res.send({ message: 'File deleted successfully', success: true });
+    } catch (err) {
+        res.status(500).send({ message: err.message, success: false });
+    }
 });
 
-router.put("/update", auth, adminRole, uploadFile.single("new_reel"), async (req, res) => {
+
+router.put("/update", auth, adminRole, uploadFile.single("reel"), async (req, res) => {
 
     console.log(req.body)
-    let { description, category, title, id, fileUrl } = req.body;
+    let { description, category, title, language, isActive, id, fileUrl } = req.body;
     try {
         if (req.file) {
-            fileUrl = await uploadAndGetFirebaseUrl(req);
+            fileUrl = await uploadAndGetFirebaseUrl(req)
         }
 
         console.log(req.file)
@@ -239,17 +213,50 @@ router.put("/update", auth, adminRole, uploadFile.single("new_reel"), async (req
             return res.status(400).json({ message: 'Description is required' });
         }
 
-        const reel = await reels.findByIdAndUpdate(id, { $set: { category, title, fileUrl, description, } });
-        console.log(reel);
+        const feed = await reels.findByIdAndUpdate(id, { $set: { category, title, fileUrl, description, language, isActive } });
+        console.log(feed);
 
-        return res.status(201).json(reel);
+        res.status(201).json(feed);
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Internal server error' });
     }
 
 });
 
 
+router.get('/publish/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await reels.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+router.get('/draft/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await reels.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
 
 module.exports = router;

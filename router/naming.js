@@ -71,7 +71,7 @@ router.get('/get-all', async (req, res) => {
 
     let lang = req.query.lang;
     try {
-        const result = await Nameing.find({ language: lang }).populate({
+        const result = await Nameing.find({ language: lang, isActive: true }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -96,12 +96,7 @@ router.post("/calculate-love/:postId", async (req, res) => {
 
         const randomNumber = Math.floor(Math.random() * 100 + 1);
 
-        let text = await result.percentageTexts.filter(ress => {
-
-            if (ress.minPercentage <= randomNumber && ress.maxPercentage >= randomNumber) {
-                return ress.text;
-            }
-        });
+        const text = await result.percentageTexts.find(ress => ress.minPercentage <= randomNumber && ress.maxPercentage >= randomNumber);
         let frame = await result.frames[0];
 
         console.log(result.frames.length)
@@ -126,7 +121,7 @@ router.post("/calculate-love/:postId", async (req, res) => {
         let cood = [{
 
             coordinate: textCoord,
-            text: text[0].text
+            text: text.text[Math.floor(Math.random() * text.text.length)]
         }, {
 
             coordinate: percentageCoord,
@@ -189,7 +184,7 @@ router.post("/calculate-friendship/:postId", async (req, res) => {
         let cood = [{
 
             coordinate: textCoord,
-            text: text.text[Math.floor(Math.random(text.text.length))]
+            text: text.text[Math.floor(Math.random() * text.text.length)]
         }, {
 
             coordinate: percentageCoord,
@@ -340,14 +335,17 @@ router.post('/name-meaning/:id', async (req, res) => {
     try {
         const result = await Nameing.findById(req.params.id);
 
+        let mean = [];
 
-        console.log(name.length)
-
-        let mean = [...name.toLowerCase()].map(char => result.meanings.find(nam => nam.letter.toLowerCase().trim() === char));
-
-        console.log(mean)
-        mean.meaning = mean.meaning[Math.floor(Math.random(mean.meaning.length))]
-
+        [...name.toLowerCase()].forEach(char => {
+            const foundMeaning = result.meanings.find(nam => nam.letter.toLowerCase().trim() === char);
+            if (foundMeaning) {
+                // Shuffle the array of meanings for this character
+                const shuffledMeanings = foundMeaning.meaning.sort(() => Math.random() - 0.5);
+                // Pick the first meaning from the shuffled array
+                mean.push({ letter: char, meaning: shuffledMeanings[0] });
+            }
+        });
         res.send(mean);
 
     } catch (error) {
@@ -454,6 +452,112 @@ router.post('/add-comment', auth, async (req, res) => {
     }
 });
 
+
+router.get("/all", async (req, res) => {
+    try {
+        const response = await Nameing.find();
+        res.status(200).json(response);
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+})
+
+
+router.get('/publish/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await Nameing.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+router.get('/draft/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await Nameing.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+
+const cpUpload1 = uploadFile.fields([
+    { name: 'frame', maxCount: 20 },
+    { name: 'thumbnail', maxCount: 1 },
+]);
+
+router.post('/update', auth, adminRole, cpUpload1, async (req, res) => {
+
+    let { description, isActive, language, frames, percentageTexts, thumbnail, facts, meanings, type, id } = req.body;
+
+    if (frames) {
+        frames = JSON.parse(frames);
+    }
+
+    if (percentageTexts) {
+        percentageTexts = JSON.parse(percentageTexts);
+    }
+    if (facts) {
+        facts = JSON.parse(facts);
+    }
+    if (meanings) {
+        meanings = JSON.parse(meanings);
+    }
+
+
+
+    let i = 0
+
+    if (!type.includes("name")) {
+        await Promise.all(frames.map(async (frame) => {
+            try {
+                console.log(frame.fileUrl)
+            } catch (e) {
+                console.log(e.message);
+                frames[i].frameUrl = await uploadAndGetFirebaseUrl(req.files['frame'][i++])
+            }
+        }));
+    }
+
+
+    if (req.files['thumbnail'])
+        thumbnail = await uploadAndGetFirebaseUrl(req.files["thumbnail"][0]);
+
+
+
+    try {
+        const result = await Nameing.findByIdAndUpdate(id, { description, isActive, language, frames, percentageTexts, facts, meanings, category: type, user: req.user.id, thumbnail });
+
+
+        const Language = await Category.findById(result.language);
+        if (!Language) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.nameTest.push(result._id);
+        const savedCategory = await Language.save();
+
+        res.send(result)
+    } catch (error) {
+        res.status(500).send({ message: "Error creating image", error: error.message });
+    }
+});
 
 
 module.exports = router;

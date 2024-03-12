@@ -17,7 +17,8 @@ module.exports = mongoose.model("fanQuizzes", {
 
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
     isActive: { type: Boolean, default: false },
-
+    category: String,
+    subCategory: String,
 
     questions: [{
 
@@ -47,7 +48,7 @@ module.exports = mongoose.model("fanQuizzes", {
             width: Number,
             height: Number,
         },
-        noOfTexts: [],
+        noOfImages: { type: Number, default: 0 },
     }],
 
     referenceImage: { type: String },

@@ -383,9 +383,10 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
     for (let k = 0; k < questions.length; k++) {
         const question = questions[k];
         console.log(question);
-        if (question.questionType === 'image' && (typeof question.question === 'object' && Object.keys(question.question).length === 0)) {
+        if ((question.questionType === 'image' || question.questionType === 'both') && (typeof question.imageQuestion === 'object' && Object.keys(question.imageQuestion).length === 0)) {
 
-            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+
+            questions[k]["imageQuestion"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
         }
 
         if (question.optionType === 'image') {
@@ -401,9 +402,9 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
     }
 
     // Sequentially process results
-    if (resultImage && results) {
+    if (results) {
         for (let m = 0; m < results.length; m++) {
-            if (typeof results.resultImg === 'object' && Object.keys(results.resultImg).length === 0) {
+            if (typeof results[m].resultImg === 'object' && Object.keys(results[m].resultImg).length === 0) {
 
                 results[m].resultImg = await uploadAndGetFirebaseUrl(req.files["answer"][m]);
             }

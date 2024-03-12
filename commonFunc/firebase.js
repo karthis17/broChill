@@ -44,4 +44,5 @@ const uploadAndGetFirebaseUrl = async (req) => {
 module.exports = {
     uploadFile,
     uploadAndGetFirebaseUrl,
+    bucket
 }

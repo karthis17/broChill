@@ -35,8 +35,8 @@ router.post("/add-riddle", auth, adminRole, cpUpload, async (req, res) => {
     for (let k = 0; k < questions.length; k++) {
         const question = questions[k];
 
-        if (question.questionType === 'image') {
-            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        if (question.questionType === 'image' || question.questionType === 'both') {
+            questions[k]["imageQuestion"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
         }
 
         if (question.optionType === 'image') {
@@ -76,7 +76,7 @@ router.get('/get-all', async (req, res) => {
 
     let lang = req.query.lang;
     try {
-        const quizzes = await riddles.find({ language: lang }).populate({
+        const quizzes = await riddles.find({ language: lang, isActive: true }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -223,32 +223,31 @@ router.get('/view/:id', async (req, res) => {
 const cpUpload1 = uploadFile.fields([
     { name: 'question', maxCount: 20 },
     { name: 'option', maxCount: 50 },
-    { name: 'answer', maxCount: 20 },
     { name: 'referencesImage', maxCount: 2 }
 ]);
 
+
 router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
 
-    let { questions, description, language, category, subCategory, id, isActive } = req.body;
 
-    console.log(req.body)
+    let { questions, description, language, category, subCategory, referencesImage, id, isActive } = req.body;
 
-    if (questions) {
-
-        questions = JSON.parse(questions)
-        console.log(questions)
+    if (!questions) {
+        res.status(404).send({ message: "questions not found", success: false });
     }
 
 
+    questions = JSON.parse(questions);
 
     let i = 0;
     let j = 0;
+
     for (let k = 0; k < questions.length; k++) {
         const question = questions[k];
         console.log(question);
-        if (question.questionType === 'image' && (typeof question.question === 'object' && Object.keys(question.question).length === 0)) {
+        if ((question.questionType === 'image' || question.questionType === 'both') && (typeof question.imageQuestion === 'object' && Object.keys(question.imageQuestion).length === 0)) {
 
-            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+            questions[k]["imageQuestion"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
         }
 
         if (question.optionType === 'image') {
@@ -263,9 +262,6 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
         }
     }
 
-
-    let referencesImage = req.body.referenceImage
-
     try {
 
         referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
@@ -273,24 +269,17 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
         console.log(e)
     }
 
-
     try {
-        const qu = await riddles.create({ questions, description, referenceImage: referencesImage, category, subCategory, language, user: req.user.id });
-        const Language = await Category.findById(qu.language);
-        if (!Language) {
-            return res.status(404).send({ success: false, error: 'Language not found' });
-        }
-        Language.data.riddles.push(qu._id);
-        const savedCategory = await Language.save();
+        const ress = await riddles.findByIdAndUpdate(id, { $set: { questions, description, language, category, isActive, subCategory, referencesImage } }, { new: true });
 
-
-
-        res.send(qu);
+        res.json(ress);
     } catch (error) {
-        res.status(500).send({ message: error.message });
+
+        console.log(error)
+
+        res.status(500).json({ error: error.message });
+
     }
-
-
 });
 
 router.get('/publish/:postId', async (req, res) => {

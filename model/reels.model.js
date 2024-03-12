@@ -5,7 +5,7 @@ module.exports = mongoose.model("reel", {
     title: { type: String, required: true },
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
     description: { type: String },
-    category: { type: mongoose.Schema.Types.ObjectId, ref: 'category' },
+    category: { type: String, required: true },
     fileUrl: { type: String, required: true },
     likes: [{
         type: mongoose.Schema.Types.ObjectId, ref: 'User'

@@ -173,7 +173,7 @@ router.get('/get-all', async (req, res) => {
 
     let lang = req.query.lang;
     try {
-        const fanquizzes = await general.find({ language: lang }).populate({
+        const fanquizzes = await general.find({ language: lang, isActive: true }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -334,19 +334,75 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
 });
 
-router.put('/update', auth, adminRole, async (req, res) => {
-    const { id, question, options } = req.body;
-    if (!question) {
-        return res.status(404).json({ error: "question not found" });
+const cpUpload1 = uploadFile.fields([
+    { name: 'question', maxCount: 20 },
+    { name: 'option', maxCount: 50 },
+    { name: 'answer', maxCount: 20 },
+    { name: 'referencesImage', maxCount: 2 }
+]);
+
+
+
+router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
+
+
+    let { questions, results, description, language, resultImage, category, subCategory, referencesImage, id, isActive } = req.body;
+
+    if (!questions) {
+        res.status(404).send({ message: "questions not found", success: false });
     }
 
-    if (!Array.isArray(options)) {
-        return res.status(404).json({ error: "option must be array with contain option and answer object" });
 
+    questions = JSON.parse(questions);
+
+    if (results) {
+
+        results = JSON.parse(results)
+    }
+
+
+    let i = 0;
+    let j = 0;
+
+    for (let k = 0; k < questions.length; k++) {
+        const question = questions[k];
+        console.log(question);
+        if ((question.questionType === 'image' || question.questionType === 'both') && (typeof question.imageQuestion === 'object' && Object.keys(question.imageQuestion).length === 0)) {
+
+            questions[k]["imageQuestion"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        }
+
+        if (question.optionType === 'image') {
+            // Sequentially process options
+            for (let n = 0; n < question.options.length; n++) {
+                const option = question.options[n];
+                if (typeof option.option === 'object' && Object.keys(option.option).length === 0) {
+
+                    questions[k]["options"][n].option = await uploadAndGetFirebaseUrl(req.files["option"][j++]);
+                }
+            }
+        }
+    }
+
+    // Sequentially process results
+    if (resultImage && results) {
+        for (let m = 0; m < results.length; m++) {
+            if (typeof results[m].resultImg === 'object' && Object.keys(results[m].resultImg).length === 0) {
+
+                results[m].resultImg = await uploadAndGetFirebaseUrl(req.files["answer"][m]);
+            }
+        }
+
+    }
+    try {
+
+        referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
+    } catch (e) {
+        console.log(e)
     }
 
     try {
-        const ress = await general.findByIdAndUpdate(id, { $set: { question, options } });
+        const ress = await general.findByIdAndUpdate(id, { $set: { questions, results, description, language, resultImage, category, isActive, subCategory, referencesImage } }, { new: true });
 
         res.json(ress);
     } catch (error) {
@@ -355,5 +411,51 @@ router.put('/update', auth, adminRole, async (req, res) => {
 
     }
 });
+
+router.get("/all", async (req, res) => {
+    try {
+        const ress = await general.find();
+
+        res.send(ress);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+router.get('/publish/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await general.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+router.get('/draft/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await general.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
 
 module.exports = router;

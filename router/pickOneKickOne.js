@@ -20,7 +20,7 @@ const cpUplad = uploadFile.fields([{
 
 router.post('/add-question', auth, adminRole, cpUplad, async (req, res) => {
 
-    let { questions, isActive, language, description } = req.body;
+    let { questions, isActive, language, subCategory, category, description } = req.body;
 
     if (questions) {
         questions = JSON.parse(questions)
@@ -53,7 +53,7 @@ router.post('/add-question', auth, adminRole, cpUplad, async (req, res) => {
         console.log(req.files["referencesImage"])
         let referencesImage = await uploadAndGetFirebaseUrl(req.files['referencesImage'][0])
 
-        const result = await pickAndKick.create({ questions, thumbnail: referencesImage, isActive, language, description, user: req.user.id });
+        const result = await pickAndKick.create({ questions, thumbnail: referencesImage, subCategory, category, isActive, language, description, user: req.user.id });
         const Language = await Category.findById(result.language);
         if (!Language) {
             return res.status(404).send({ success: false, error: 'Language not found' });
@@ -96,7 +96,7 @@ router.get('/get/:id', async (req, res) => {
 router.get('/get-all', async (req, res) => {
     try {
         let lang = req.query.lang
-        const pick = await pickAndKick.find({ language: lang }).populate({
+        const pick = await pickAndKick.find({ language: lang, isActive: true }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -183,33 +183,6 @@ router.delete("/delete/:id", auth, adminRole, async function (req, res) {
 
 });
 
-router.put("/update", auth, adminRole, uploadFile.single('question'), async (req, res) => {
-    let { option1, point1, option2, point2, id } = req.body;
-    let question;
-
-    if (req.file) {
-        question = await uploadAndGetFirebaseUrl(req);
-
-
-    } else {
-        question = req.body.question;
-    }
-
-    const options = [{ option: option1, point: point1 }, { option: option2, point: point2 }];
-    console.log(options, question)
-
-    try {
-
-        const result = await pickAndKick.findByIdAndUpdate(id, { $set: { question, options } });
-
-        res.json(result);
-
-    } catch (error) {
-
-        res.status(500).json({ error: error.message });
-
-    }
-});
 
 router.get('/share/:id', async (req, res) => {
     try {
@@ -247,6 +220,117 @@ router.post('/add-comment', auth, async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+
+const cpUpload1 = uploadFile.fields([
+    { name: 'question', maxCount: 20 },
+    { name: 'option', maxCount: 50 },
+    { name: 'answer', maxCount: 20 },
+    { name: 'referencesImage', maxCount: 2 }
+]);
+
+
+
+router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
+
+
+    let { questions, description, language, category, subCategory, referencesImage, id, isActive } = req.body;
+
+    if (!questions) {
+        res.status(404).send({ message: "questions not found", success: false });
+    }
+
+
+    questions = JSON.parse(questions);
+
+    let i = 0;
+    let j = 0;
+
+    for (let k = 0; k < questions.length; k++) {
+        const question = questions[k];
+        console.log(question);
+        if ((question.questionType === 'image' || question.questionType === 'both') && (typeof question.imageQuestion === 'object' && Object.keys(question.imageQuestion).length === 0)) {
+
+            questions[k]["imageQuestion"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        }
+
+        if (question.optionType === 'image') {
+            // Sequentially process options
+            for (let n = 0; n < question.options.length; n++) {
+                const option = question.options[n];
+                if (typeof option.option === 'object' && Object.keys(option.option).length === 0) {
+
+                    questions[k]["options"][n].option = await uploadAndGetFirebaseUrl(req.files["option"][j++]);
+                }
+            }
+        }
+    }
+
+    try {
+
+        referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
+    } catch (e) {
+        console.log(e)
+    }
+
+    try {
+        const ress = await pickAndKick.findByIdAndUpdate(id, { $set: { questions, description, language, category, isActive, subCategory, referencesImage } }, { new: true });
+
+        res.json(ress);
+    } catch (error) {
+
+        console.log(error)
+
+        res.status(500).json({ error: error.message });
+
+    }
+});
+
+
+router.get("/all", async (req, res) => {
+    try {
+        const ress = await pickAndKick.find();
+
+        res.send(ress);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+router.get('/publish/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await pickAndKick.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+router.get('/draft/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await pickAndKick.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
     }
 });
 

@@ -8,8 +8,8 @@ module.exports = mongoose.model("riddle", {
 
 
     questions: [{
-        textQuestion: { type: String, required: true },
-        imageQusetion: { type: String, required: true },
+        textQuestion: { type: String },
+        imageQuestion: { type: String },
         questionType: { type: String, required: true },
         optionType: String,
         options: [{

@@ -5,7 +5,7 @@ const path = require('path');
 const Jimp = require('jimp');
 const deleteImage = require('../commonFunc/delete.image');
 const adminRole = require('../middelware/checkRole');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const Category = require('../model/categoryModel');
 
 
@@ -129,11 +129,16 @@ router.post('/random-text/:id', cpupp, async (req, res) => {
 
         let maskImages = []
 
-        if (req.files['image']) {
+        try {
+            if (req.files['image']) {
 
-            maskImages = await Promise.all(req.files['image'].map(async (file) => {
-                return await uploadAndGetFirebaseUrl(file);
-            }));
+                maskImages = await Promise.all(req.files['image'].map(async (file) => {
+                    return await uploadAndGetFirebaseUrl(file);
+                }));
+            }
+        }
+        catch (e) {
+            console.log(e)
         }
 
 
@@ -300,7 +305,7 @@ router.get('/get-all', async (req, res) => {
 
     let lang = req.query.lang;
     try {
-        const result = await FunTest.find({ language: lang }).populate({
+        const result = await FunTest.find({ language: lang, isActive: true }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -411,53 +416,6 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 });
 
 
-// router.put('/update', auth, adminRole, upload.single('frame'), async (req, res) => {
-
-//     let { question, texts, frame_size, coordinates, frameUrl, framePath, id } = req.body;
-
-//     if (frame_size) {
-//         frame_size = JSON.parse(frame_size);
-//     }
-
-//     if (coordinates) {
-//         coordinates = JSON.parse(coordinates);
-//     }
-
-//     if (req.file) {
-
-//         try {
-//             let pathF = path.join(__dirname, `../${req.file.path}`);
-//             const image = await Jimp.read(pathF);
-
-//             await image.resize(frame_size.width, frame_size.height);
-
-//             await image.writeAsync(pathF);
-
-//             frameUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
-
-//             framePath = req.file.path;
-
-//             console.log("Image resized successfully!");
-//         } catch (error) {
-//             console.error("Error:", error);
-//         }
-
-//     }
-
-
-
-
-//     try {
-//         const ress = await randomText.findByIdAndUpdate(id, { $set: { question, texts, frameUrl, path: framePath, coordinates, frame_size } });
-
-//         res.send(ress);
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).send(error.message);
-//     }
-
-// });
-
 
 async function applyMaskImg(baseImageUrls, maskImages, outputPath, coordinates, bwidth, bheight) {
     try {
@@ -514,20 +472,6 @@ async function applyMask(baseImagePath, maskImages, outputPath, coordinates, bwi
         const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK); // Load black font
         const { x, y, width, height } = tcoordinates;
 
-        // Calculate the center coordinates within the specified region
-        // const centerX = x + width / 2;
-        // const centerY = y + height / 2;
-
-        // // Measure text width and height
-        // const textWidth = Jimp.measureText(font, text);
-        // const textHeight = Jimp.measureTextHeight(font, text);
-
-        // // Calculate the starting position of the text to achieve center alignment
-        // const textX = centerX - textWidth / 2;
-        // const textY = centerY - textHeight / 2;
-
-        // // Print the text in the center of the region
-
         image.print(font, parseInt(x), parseInt(y), {
             text: text,
             alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
@@ -542,6 +486,113 @@ async function applyMask(baseImagePath, maskImages, outputPath, coordinates, bwi
         console.error("Error:", error);
     }
 }
+
+
+router.get("/all", async (req, res) => {
+    try {
+        const data = await FunTest.find();
+        res.send(data);
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+})
+
+
+router.get('/publish/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await FunTest.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+router.get('/draft/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await FunTest.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+const cpUpload2 = uploadFile.fields([{ name: 'frame', maxCount: 3 }
+    , { name: "thumbnail", maxCount: 1 }
+    , { name: "referenceImage", maxCount: 1 }
+]);
+
+router.post("/update", auth, adminRole, cpUpload2, async (req, res) => {
+
+
+    let { question, texts, frames, isActive, description, language, type, noOfUserImage, range, id, thumbnail, referenceImage } = req.body;
+
+    if (texts) {
+        texts = JSON.parse(texts);
+    }
+
+    if (frames) {
+        frames = JSON.parse(frames);
+    }
+
+    if (range) {
+        range = JSON.parse(range);
+    }
+    //     return res.status(404).send({ message: "No tumbnail file found" });
+
+    // }
+
+    if (req.files["referenceImage"]) {
+
+        referenceImage = await uploadAndGetFirebaseUrl(req.files["referenceImage"][0]);
+    }
+    if (req.files["thumbnail"]) {
+
+        thumbnail = await uploadAndGetFirebaseUrl(req.files["thumbnail"][0]);
+    }
+
+    let i = 0
+    await Promise.all(frames.map(async (frame, j) => {
+        try {
+            console.log(frame.frameUrl)
+        } catch (e) {
+            const frameUrl = await uploadAndGetFirebaseUrl(req.files["frame"][i++]);
+            frames[j]['frameUrl'] = frameUrl;
+        }
+    }));
+
+
+
+    try {
+
+
+
+        const ress = await FunTest.findByIdAndUpdate(id, { question, isActive, texts, description, language, frames, thumbnail, referenceImage, range, noOfUserImage, category: type, user: req.user.id });
+
+
+        res.send(ress);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send(error.message);
+    }
+
+});
+
 
 
 module.exports = router;

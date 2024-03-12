@@ -4,7 +4,8 @@ module.exports = mongoose.model("generalQuestion", {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
 
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
-
+    category: String,
+    subCategory: String,
 
     questions: [{
 
@@ -37,7 +38,7 @@ module.exports = mongoose.model("generalQuestion", {
             width: Number,
             height: Number,
         },
-        noOfTexts: [],
+        noOfImage: { type: Number, default: 0 },
     }],
 
     referenceImage: { type: String },

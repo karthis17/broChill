@@ -384,6 +384,7 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
         results = JSON.parse(results)
     }
 
+    console.log(results);
 
     let i = 0;
     let j = 0;
@@ -391,9 +392,9 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
     for (let k = 0; k < questions.length; k++) {
         const question = questions[k];
         console.log(question);
-        if (question.questionType === 'image' && (typeof question.question === 'object' && Object.keys(question.question).length === 0)) {
+        if ((question.questionType === 'image' || question.questionType === 'both') && (typeof question.imageQuestion === 'object' && Object.keys(question.imageQuestion).length === 0)) {
 
-            questions[k]["question"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+            questions[k]["imageQuestion"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
         }
 
         if (question.optionType === 'image') {
@@ -408,12 +409,15 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
         }
     }
 
+
+    let o = 0
+    console.log(resultImage)
     // Sequentially process results
     if (resultImage && results) {
         for (let m = 0; m < results.length; m++) {
-            if (typeof results.resultImg === 'object' && Object.keys(results.resultImg).length === 0) {
-
-                results[m].resultImg = await uploadAndGetFirebaseUrl(req.files["answer"][m]);
+            if (typeof results[m].resultImg === 'object' && Object.keys(results[m].resultImg).length === 0) {
+                results[m].resultImg = await uploadAndGetFirebaseUrl(req.files["answer"][o++]);
+                console.log(results[m].resultImg, "asd;oahfds")
             }
         }
 
@@ -430,6 +434,8 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
 
         res.json(ress);
     } catch (error) {
+
+        console.log(error)
 
         res.status(500).json({ error: error.message });
 
@@ -467,6 +473,60 @@ router.get('/draft/:postId', async (req, res) => {
 
         res.status(500).send({ error: error.message, success: false });
 
+    }
+});
+
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
+
+    const id = req.params.id;
+
+    const cont = await contest.findById(id);
+
+    if (!cont) {
+        return res.status(404).json({ message: 'cont not found' });
+    }
+
+    try {
+        // Delete the file from Firebase Storage
+        const fileUrl = cont.referencesImage;
+        const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
+        await bucket.file(fileName).delete();
+
+
+        await Promise.all(cont.questions.map(async (question) => {
+            if (question.questionType === 'image') {
+                const fileUrl = question.imageQuestion;
+                const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
+                await bucket.file(fileName).delete();
+            }
+
+            if (question.optionType === 'image') {
+                await Promise.all(question.options.map(async (option) => {
+                    const fileUrl = option.option;
+                    const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
+                    await bucket.file(fileName).delete();
+
+                }))
+            }
+
+        }));
+
+        if (cont.resultImage) {
+            await Promise.all(cont.results.map(async (ress) => {
+                const fileUrl = ress.resultImg;
+                const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
+                await bucket.file(fileName).delete();
+            }));
+
+        }
+
+
+        // Delete the feed from the database
+        await contest.deleteOne(id);
+
+        res.send({ message: 'File deleted successfully', success: true });
+    } catch (err) {
+        res.status(500).send({ message: err.message, success: false });
     }
 });
 

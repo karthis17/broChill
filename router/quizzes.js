@@ -95,7 +95,7 @@ router.get('/get-all', async (req, res) => {
 
     let lang = req.query.lang;
     try {
-        const quizzes = await Quizzes.find({ language: lang }).populate({
+        const quizzes = await Quizzes.find({ language: lang, isActive: true }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -378,27 +378,116 @@ router.get('/view/:id', async (req, res) => {
 });
 
 
-router.put('/update', auth, adminRole, async (req, res) => {
+
+const cpUpload1 = uploadFile.fields([
+    { name: 'question', maxCount: 20 },
+    { name: 'option', maxCount: 50 },
+    { name: 'answer', maxCount: 20 },
+    { name: 'referencesImage', maxCount: 2 }
+]);
 
 
-    let { questions, results, description, language, resultImage, category, subCategory, id } = req.body;
+
+router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
+
+
+    let { questions, results, description, language, category, subCategory, referencesImage, id, isActive } = req.body;
 
     if (!questions) {
         res.status(404).send({ message: "questions not found", success: false });
     }
 
-    if (!results) {
-        res.status(404).send({ message: "results not found", success: false });
 
+    questions = JSON.parse(questions);
+
+    if (results) {
+
+        results = JSON.parse(results)
+    }
+
+
+    let i = 0;
+    let j = 0;
+    for (let k = 0; k < questions.length; k++) {
+        const question = questions[k];
+        console.log(question);
+        if ((question.questionType === 'image' || question.questionType === 'both') && (typeof question.imageQuestion === 'object' && Object.keys(question.imageQuestion).length === 0)) {
+
+
+            questions[k]["imageQuestion"] = await uploadAndGetFirebaseUrl(req.files["question"][i++]);
+        }
+
+        if (question.optionType === 'image') {
+            // Sequentially process options
+            for (let n = 0; n < question.options.length; n++) {
+                const option = question.options[n];
+                if (typeof option.option === 'object' && Object.keys(option.option).length === 0) {
+
+                    questions[k]["options"][n].option = await uploadAndGetFirebaseUrl(req.files["option"][j++]);
+                }
+            }
+        }
+    }
+
+    // Sequentially process results
+    if (results) {
+        for (let m = 0; m < results.length; m++) {
+            if (typeof results[m].resultImg === 'object' && Object.keys(results[m].resultImg).length === 0) {
+
+                results[m].resultImg = await uploadAndGetFirebaseUrl(req.files["answer"][m]);
+            }
+        }
+
+    }
+    try {
+
+        referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
+    } catch (e) {
+        console.log(e)
     }
 
     try {
-        const ress = await Quizzes.findByIdAndUpdate(id, { $set: { questions, results, description, language, resultImage, category, subCategory } }, { new: true });
+        const ress = await Quizzes.findByIdAndUpdate(id, { $set: { questions, results, description, language, category, isActive, subCategory, referencesImage } });
 
         res.json(ress);
     } catch (error) {
 
         res.status(500).json({ error: error.message });
+
+    }
+});
+
+
+router.get('/publish/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await Quizzes.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
+
+    }
+});
+
+router.get('/draft/:postId', async (req, res) => {
+
+    const postId = req.params.postId;
+
+    try {
+
+        const result = await Quizzes.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+
+        res.send({ success: true, message: "Successfully published", data: result });
+
+    } catch (error) {
+
+        res.status(500).send({ error: error.message, success: false });
 
     }
 });
