@@ -4,7 +4,7 @@ const auth = require('../middelware/auth');
 const adminRole = require('../middelware/checkRole');
 // const multer = require('multer');
 const Category = require('../model/categoryModel');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const path = require('path');
 const Jimp = require('jimp');
 
@@ -324,16 +324,6 @@ async function applyMask(baseImagePath, maskImages, outputPath, texts, scoreCoor
 }
 
 
-router.delete('/delete/:id', auth, adminRole, async (req, res) => {
-    try {
-        await general.deleteOne({ _id: req.params.id });
-        res.status(200).send({ message: "record deletd successfully." });
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-
-});
-
 const cpUpload1 = uploadFile.fields([
     { name: 'question', maxCount: 20 },
     { name: 'option', maxCount: 50 },
@@ -455,6 +445,93 @@ router.get('/draft/:postId', async (req, res) => {
         res.status(500).send({ error: error.message, success: false });
 
     }
+});
+
+
+
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
+
+    const id = req.params.id;
+
+    const cont = await general.findById(id);
+
+    if (!cont) {
+        return res.status(404).json({ message: 'cont not found' });
+    }
+
+    try {
+        // Delete the file from Firebase Storage
+        const fileUrl = cont.referenceImage;
+        const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+        const fileName = decodeURIComponent(encodedFileName);
+        console.log("Attempting to delete file:", fileName);
+        try {
+
+            await bucket.file(fileName).delete();
+            console.log(fileName, "deleted");
+        } catch (e) {
+            console.log("Error deleting file", e.message);
+        }
+
+        await Promise.all(cont.questions.map(async (question) => {
+            if (question.questionType === 'image' && question.imageQuestion) {
+                const fileUrl = question.imageQuestion;
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete question image:", fileName);
+                try {
+                    await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (err) {
+                    console.error("Error deleting question image:", err);
+                    // Skip to the next iteration of the loop
+
+                }
+            }
+
+            question.options.forEach(async (option) => {
+                if (option.optionType === 'image' && option.option) {
+                    const fileUrl = option.option;
+                    const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                    const fileName = decodeURIComponent(encodedFileName);
+                    console.log("Attempting to delete option image:", fileName);
+                    try {
+                        await bucket.file(fileName).delete();
+                        console.log(fileName, "deleted");
+                    } catch (err) {
+                        console.log("Error deleting option image:");
+                        // Skip to the next iteration of the loop
+
+                    }
+                }
+            });
+        }));
+
+        if (cont.resultImage) {
+            await Promise.all(cont.results.map(async (ress) => {
+                const fileUrl = ress.resultImg;
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete file:", fileName);
+                try {
+                    await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (err) {
+                    console.log("Error deleting file:");
+                    // Skip to the next iteration of the loop
+
+                }
+            }));
+        }
+
+        // Delete the feed from the database
+        await general.deleteOne({ _id: id });
+
+        res.send({ message: 'File deleted successfully', success: true });
+    } catch (err) {
+        res.status(500).send({ message: err.message, success: false });
+    }
+
 });
 
 

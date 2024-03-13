@@ -31,7 +31,7 @@ const uploadAndGetFirebaseUrl = async (req) => {
     }
 
     else {
-        const imageName = fileData.originalname;
+        const imageName = fileData.fieldname + "-" + fileData.originalname + "-" + Date.now() + "-" + Math.floor(Math.random() * 1000000);
         const file = bucket.file(imageName);
         await file.save(imageBuffer, { contentType: 'image/jpeg' });
         const [url] = await file.getSignedUrl({ action: 'read', expires: '03-01-2500' });

@@ -464,4 +464,96 @@ router.get('/draft/:postId', async (req, res) => {
     }
 });
 
+
+
+
+
+
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
+
+    const id = req.params.id;
+
+    const cont = await Quizzes.findById(id);
+
+    if (!cont) {
+        return res.status(404).json({ message: 'cont not found' });
+    }
+
+    try {
+        // Delete the file from Firebase Storage
+        const fileUrl = cont.referenceImage;
+        const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+        const fileName = decodeURIComponent(encodedFileName);
+        console.log("Attempting to delete file:", fileName);
+        try {
+
+            await bucket.file(fileName).delete();
+            console.log(fileName, "deleted");
+        } catch (e) {
+            console.log("Error deleting file", e.message);
+        }
+
+        await Promise.all(cont.questions.map(async (question) => {
+            if (question.questionType === 'image' && question.imageQuestion) {
+                const fileUrl = question.imageQuestion;
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete question image:", fileName);
+                try {
+                    await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (err) {
+                    console.error("Error deleting question image:", err);
+                    // Skip to the next iteration of the loop
+
+                }
+            }
+
+            question.options.forEach(async (option) => {
+                if (option.optionType === 'image' && option.option) {
+                    const fileUrl = option.option;
+                    const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                    const fileName = decodeURIComponent(encodedFileName);
+                    console.log("Attempting to delete option image:", fileName);
+                    try {
+                        await bucket.file(fileName).delete();
+                        console.log(fileName, "deleted");
+                    } catch (err) {
+                        console.log("Error deleting option image:");
+                        // Skip to the next iteration of the loop
+
+                    }
+                }
+            });
+        }));
+
+        if (cont.results) {
+            await Promise.all(cont.results.map(async (ress) => {
+                const fileUrl = ress.resultImg;
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete file:", fileName);
+                try {
+                    await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (err) {
+                    console.log("Error deleting file:");
+                    // Skip to the next iteration of the loop
+
+                }
+            }));
+        }
+
+        // Delete the feed from the database
+        await Quizzes.deleteOne({ _id: id });
+
+        res.send({ message: 'File deleted successfully', success: true });
+    } catch (err) {
+        res.status(500).send({ message: err.message, success: false });
+    }
+
+});
+
+
+
 module.exports = router;

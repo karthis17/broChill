@@ -2,7 +2,7 @@ const router = require('express').Router();
 const contest = require("../model/contest.model")
 const auth = require('../middelware/auth');
 const adminRole = require('../middelware/checkRole');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const Jimp = require('jimp');
 
 
@@ -476,6 +476,7 @@ router.get('/draft/:postId', async (req, res) => {
     }
 });
 
+
 router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
     const id = req.params.id;
@@ -488,46 +489,77 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
     try {
         // Delete the file from Firebase Storage
-        const fileUrl = cont.referencesImage;
-        const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
-        await bucket.file(fileName).delete();
+        const fileUrl = cont.referenceImage;
+        const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+        const fileName = decodeURIComponent(encodedFileName);
+        console.log("Attempting to delete file:", fileName);
+        try {
 
+            await bucket.file(fileName).delete();
+            console.log(fileName, "deleted");
+        } catch (e) {
+            console.log("Error deleting file", e.message);
+        }
 
         await Promise.all(cont.questions.map(async (question) => {
-            if (question.questionType === 'image') {
+            if (question.questionType === 'image' && question.imageQuestion) {
                 const fileUrl = question.imageQuestion;
-                const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
-                await bucket.file(fileName).delete();
-            }
-
-            if (question.optionType === 'image') {
-                await Promise.all(question.options.map(async (option) => {
-                    const fileUrl = option.option;
-                    const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete question image:", fileName);
+                try {
                     await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (err) {
+                    console.error("Error deleting question image:", err);
+                    // Skip to the next iteration of the loop
 
-                }))
+                }
             }
 
+            question.options.forEach(async (option) => {
+                if (option.optionType === 'image' && option.option) {
+                    const fileUrl = option.option;
+                    const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                    const fileName = decodeURIComponent(encodedFileName);
+                    console.log("Attempting to delete option image:", fileName);
+                    try {
+                        await bucket.file(fileName).delete();
+                        console.log(fileName, "deleted");
+                    } catch (err) {
+                        console.log("Error deleting option image:");
+                        // Skip to the next iteration of the loop
+
+                    }
+                }
+            });
         }));
 
         if (cont.resultImage) {
             await Promise.all(cont.results.map(async (ress) => {
                 const fileUrl = ress.resultImg;
-                const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
-                await bucket.file(fileName).delete();
-            }));
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete file:", fileName);
+                try {
+                    await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (err) {
+                    console.log("Error deleting file:");
+                    // Skip to the next iteration of the loop
 
+                }
+            }));
         }
 
-
         // Delete the feed from the database
-        await contest.deleteOne(id);
+        await contest.deleteOne({ _id: id });
 
         res.send({ message: 'File deleted successfully', success: true });
     } catch (err) {
         res.status(500).send({ message: err.message, success: false });
     }
+
 });
 
 

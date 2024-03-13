@@ -71,7 +71,7 @@ router.get('/get-all', async (req, res) => {
 
     let lang = req.query.lang;
     try {
-        const result = await Nameing.find({ language: lang, isActive: true }).populate({
+        const result = await Nameing.find({ language: lang, isActive: true }).select(["-frames", "-percentageTexts", "-facts", "-meanings"]).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
