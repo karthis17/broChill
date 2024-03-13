@@ -8,7 +8,7 @@ const adminRole = require('../middelware/checkRole');
 const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const Category = require('../model/categoryModel');
 
-
+const ObjectId = require('mongoose').Types.ObjectId;
 
 
 const cpUpload1 = uploadFile.fields([{ name: 'frame', maxCount: 3 }
@@ -92,11 +92,35 @@ router.post('/random-image/:id', async (req, res) => {
     try {
         const ress = await FunTest.findById(req.params.id);
 
+
+        let frame;
+        if (req.body.frameId) {
+
+            const frameIdObjectId = new ObjectId(req.body.frameId);
+
+            // Now you can compare the ObjectIds
+            let f_id = ress.frames.findIndex(f => f._id.equals(frameIdObjectId));
+            console.log(f_id, "asdfg")
+            if (f_id !== -1) {
+                frame = ress.frames[f_id + 1]
+            } else {
+                frame = ress.frames[0];
+            }
+
+        } else {
+
+            frame = ress.frames[0];
+        }
+
+        if (frame === undefined) {
+            frame = ress.frames[0]
+        }
+
         const maskImages = [req.body.image]
-        const baseImage = ress.frames[0].frameUrl;
-        const width = ress.frames[0].frame_size.width;
-        const height = ress.frames[0].frame_size.height;
-        const coordinates = ress.frames[0].coordinates;
+        const baseImage = frame.frameUrl;
+        const width = frame.frame_size.width;
+        const height = frame.frame_size.height;
+        const coordinates = frame.coordinates;
 
         const outputPath = path.join(__dirname, `../uploads/${req.params.id}.png`);
 
@@ -104,7 +128,7 @@ router.post('/random-image/:id', async (req, res) => {
 
         await applyMaskImg(baseImage, maskImages, outputPath, coordinates, width, height);
 
-        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id}.png` });
+        res.send({ _id: frame._id, result: `${req.protocol}://${req.get('host')}/${req.params.id}.png` });
     } catch (error) {
         console.error('An error occurred:', error);
         res.status(500).send(error.message);
@@ -158,13 +182,28 @@ router.post('/random-text/:id', cpupp, async (req, res) => {
     }
 });
 
+const cpup1 = uploadFile.fields([{
+    name: 'image', maxCount: 10
+}])
 
-router.get('/single-percentage/:id', auth, async (req, res) => {
+router.get('/single-percentage/:id', auth, cpup1, async (req, res) => {
     try {
         const re = await FunTest.findById(req.params.id);
 
-        const maskImages = req.body.image
 
+        let maskImages = []
+
+        try {
+
+            if (req.files['image']) {
+
+                maskImages = await Promise.all(req.files['image'].map(async (file) => {
+                    return await uploadAndGetFirebaseUrl(file);
+                }));
+            }
+        } catch (e) {
+            console.log(e);
+        }
 
 
         const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
@@ -533,7 +572,7 @@ router.get('/draft/:postId', async (req, res) => {
     }
 });
 
-const cpUpload2 = uploadFile.fields([{ name: 'frame', maxCount: 3 }
+const cpUpload2 = uploadFile.fields([{ name: 'frame', maxCount: 20 }
     , { name: "thumbnail", maxCount: 1 }
     , { name: "referenceImage", maxCount: 1 }
 ]);
