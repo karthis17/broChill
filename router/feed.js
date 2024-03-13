@@ -252,8 +252,16 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
     try {
         // Delete the file from Firebase Storage
         const fileUrl = feed.imageUrl;
-        const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
-        await bucket.file(fileName).delete();
+        const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+        const fileName = decodeURIComponent(encodedFileName);
+        console.log("Attempting to delete file:", fileName);
+        try {
+
+            await bucket.file(fileName).delete();
+            console.log(fileName, "deleted");
+        } catch (e) {
+            console.log("Error deleting file", e.message);
+        }
 
         // Delete the feed from the database
         await feeds.deleteOne(id);

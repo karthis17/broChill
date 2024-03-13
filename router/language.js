@@ -142,15 +142,13 @@ router.get('/category-names', (req, res) => {
             }
 
             const result = [];
-            const categoryNames = ["Reels", "Feeds", "Personality Quiz", "Fans Quiz", "Fun Test", "Name Test", "Polls", "Frames", "Party Games", "Contest Quiz", "GK Quiz", "Riddles"];
-            const nameInDataBase = ["reels",
-                "feeds",
+            const categoryNames = ["Personality Quiz", "Fans Quiz", "Fun Test", "Name Test", "Polls", "Party Games", "Contest Quiz", "GK Quiz", "Riddles"];
+            const nameInDataBase = [
                 "quizzes",
                 "fanQuizzes",
                 "funTest",
                 "nameTest",
                 "polls",
-                "frames",
                 "pickOneKickOne",
                 "ContestQuiz",
                 "gkQuestion",
@@ -164,7 +162,10 @@ router.get('/category-names', (req, res) => {
                 // Check each category in data and add non-empty category names to the array
                 for (const key in data) {
                     if (data.hasOwnProperty(key) && Array.isArray(data[key]) && data[key].length > 0) {
-                        nonEmptyCategories.push(categoryNames[nameInDataBase.indexOf(key)]);
+                        if (nameInDataBase.indexOf(key) !== -1) {
+                            nonEmptyCategories.push(categoryNames[nameInDataBase.indexOf(key)]);
+                        }
+
                     }
                 }
 

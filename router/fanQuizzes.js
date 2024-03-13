@@ -2,7 +2,7 @@ const router = require('express').Router();
 const Quizzes = require('../model/fanQuizzes.model');
 const auth = require('../middelware/auth');
 const adminRole = require('../middelware/checkRole');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const Jimp = require('jimp');
 
 
@@ -208,17 +208,6 @@ router.post('/get-result', cpUplad, async (req, res) => {
     }
 });
 
-router.delete("/delete/:id", auth, adminRole, async (req, res) => {
-
-    try {
-        await Quizzes.deleteOne({ _id: req.params.id });
-        res.status(200).json({ message: "Deleted successfully", success: true });
-    } catch (error) {
-        res.status(200).json({ message: error.message, success: false });
-
-    }
-
-});
 
 
 router.post('/:postId/like', auth, async (req, res) => {
@@ -492,7 +481,6 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
         } catch (e) {
             console.log("Error deleting file", e.message);
         }
-
         await Promise.all(cont.questions.map(async (question) => {
             if (question.questionType === 'image' && question.imageQuestion) {
                 const fileUrl = question.imageQuestion;
@@ -505,12 +493,15 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
                 } catch (err) {
                     console.error("Error deleting question image:", err);
                     // Skip to the next iteration of the loop
-
                 }
             }
 
-            question.options.forEach(async (option) => {
-                if (option.optionType === 'image' && option.option) {
+            console.log("Number of options:", question.options.length); // Log the length of question.options
+
+            if (question.optionType == 'image' && question.options.length > 0) {
+                // Use Promise.all() for option deletions
+                await Promise.all(question.options.map(async (option) => {
+
                     const fileUrl = option.option;
                     const encodedFileName = fileUrl.split('/').pop().split('?')[0];
                     const fileName = decodeURIComponent(encodedFileName);
@@ -519,13 +510,20 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
                         await bucket.file(fileName).delete();
                         console.log(fileName, "deleted");
                     } catch (err) {
-                        console.log("Error deleting option image:");
+                        console.log("Error deleting option image:", err);
                         // Skip to the next iteration of the loop
-
                     }
-                }
-            });
+
+                }));
+            } else {
+                console.log("No options found for this question.");
+            }
         }));
+
+        // Continue with the deletion of cont.results...
+
+        // Continue with the deletion of cont.results...
+
 
         if (cont.results) {
             await Promise.all(cont.results.map(async (ress) => {

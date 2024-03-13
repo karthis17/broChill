@@ -449,11 +449,12 @@ router.get('/draft/:postId', async (req, res) => {
 
 
 
+
 router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
     const id = req.params.id;
 
-    const cont = await general.findById(id);
+    const cont = await contest.findById(id);
 
     if (!cont) {
         return res.status(404).json({ message: 'cont not found' });
@@ -472,7 +473,6 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
         } catch (e) {
             console.log("Error deleting file", e.message);
         }
-
         await Promise.all(cont.questions.map(async (question) => {
             if (question.questionType === 'image' && question.imageQuestion) {
                 const fileUrl = question.imageQuestion;
@@ -485,12 +485,15 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
                 } catch (err) {
                     console.error("Error deleting question image:", err);
                     // Skip to the next iteration of the loop
-
                 }
             }
 
-            question.options.forEach(async (option) => {
-                if (option.optionType === 'image' && option.option) {
+            console.log("Number of options:", question.options.length); // Log the length of question.options
+
+            if (question.optionType == 'image' && question.options.length > 0) {
+                // Use Promise.all() for option deletions
+                await Promise.all(question.options.map(async (option) => {
+
                     const fileUrl = option.option;
                     const encodedFileName = fileUrl.split('/').pop().split('?')[0];
                     const fileName = decodeURIComponent(encodedFileName);
@@ -499,13 +502,20 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
                         await bucket.file(fileName).delete();
                         console.log(fileName, "deleted");
                     } catch (err) {
-                        console.log("Error deleting option image:");
+                        console.log("Error deleting option image:", err);
                         // Skip to the next iteration of the loop
-
                     }
-                }
-            });
+
+                }));
+            } else {
+                console.log("No options found for this question.");
+            }
         }));
+
+        // Continue with the deletion of cont.results...
+
+        // Continue with the deletion of cont.results...
+
 
         if (cont.resultImage) {
             await Promise.all(cont.results.map(async (ress) => {
@@ -525,7 +535,7 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
         }
 
         // Delete the feed from the database
-        await general.deleteOne({ _id: id });
+        await contest.deleteOne({ _id: id });
 
         res.send({ message: 'File deleted successfully', success: true });
     } catch (err) {
@@ -533,6 +543,5 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
     }
 
 });
-
 
 module.exports = router;
