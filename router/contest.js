@@ -218,17 +218,7 @@ router.post('/get-result', cpUplad, async (req, res) => {
     }
 });
 
-router.delete("/delete/:id", auth, adminRole, async (req, res) => {
 
-    try {
-        await contest.deleteOne({ _id: req.params.id });
-        res.status(200).json({ message: "Deleted successfully", success: true });
-    } catch (error) {
-        res.status(200).json({ message: error.message, success: false });
-
-    }
-
-});
 
 
 router.post('/:postId/like', auth, async (req, res) => {
@@ -501,7 +491,8 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
             console.log("Error deleting file", e.message);
         }
         await Promise.all(cont.questions.map(async (question) => {
-            if (question.questionType === 'image' && question.imageQuestion) {
+            if ((question.questionType === 'image' || question.questionType === 'both') && question.imageQuestion) {
+
                 const fileUrl = question.imageQuestion;
                 const encodedFileName = fileUrl.split('/').pop().split('?')[0];
                 const fileName = decodeURIComponent(encodedFileName);

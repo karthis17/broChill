@@ -2,7 +2,7 @@ const feeds = require('../model/feed.model');
 const router = require('express').Router();
 const auth = require('../middelware/auth');
 const adminRole = require('../middelware/checkRole');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const Category = require('../model/categoryModel');
 
 router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (req, res) => {
@@ -194,23 +194,6 @@ router.post('/add-comment', auth, async (req, res) => {
 });
 
 
-router.delete('/delete/:id', auth, adminRole, async (req, res) => {
-
-
-    try {
-        const feed = await feeds.findById(req.params.id);
-
-        await feeds.deleteOne({ _id: await feed._id });
-        res.status(200).json({ message: "record deleted successfully" });
-
-    }
-    catch (error) {
-        res.status(500).json({ message: error.message, success: false });
-
-    }
-
-});
-
 router.put("/update", auth, adminRole, uploadFile.single("new_feed"), async (req, res) => {
 
     console.log(req.body)
@@ -264,7 +247,7 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
         }
 
         // Delete the feed from the database
-        await feeds.deleteOne(id);
+        await feeds.deleteOne({ _id: id });
 
         res.send({ message: 'File deleted successfully', success: true });
     } catch (err) {

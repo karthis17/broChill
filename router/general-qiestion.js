@@ -474,7 +474,8 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
             console.log("Error deleting file", e.message);
         }
         await Promise.all(cont.questions.map(async (question) => {
-            if (question.questionType === 'image' && question.imageQuestion) {
+            if ((question.questionType === 'image' || question.questionType === 'both') && question.imageQuestion) {
+
                 const fileUrl = question.imageQuestion;
                 const encodedFileName = fileUrl.split('/').pop().split('?')[0];
                 const fileName = decodeURIComponent(encodedFileName);

@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const reels = require('../model/reels.model');
 const auth = require('../middelware/auth');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const adminRole = require('../middelware/checkRole');
 const Category = require('../model/categoryModel');
 
@@ -183,12 +183,19 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
     try {
         // Delete the file from Firebase Storage
+        // Delete the file from Firebase Storage
         const fileUrl = reel.fileUrl;
-        const fileName = fileUrl.split('/').pop(); // Extracting the file name from the URL
-        await bucket.file(fileName).delete();
-
+        const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+        const fileName = decodeURIComponent(encodedFileName);
+        console.log("Attempting to delete file:", fileName);
+        try {
+            await bucket.file(fileName).delete();
+            console.log(fileName, "deleted");
+        } catch (e) {
+            console.log("Error deleting file", e.message);
+        }
         // Delete the reel from the database
-        await reels.deleteOne(id);
+        await reels.deleteOne({ _id: id });
 
         res.send({ message: 'File deleted successfully', success: true });
     } catch (err) {

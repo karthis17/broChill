@@ -6,7 +6,7 @@ const router = require('express').Router();
 // const Jimp = require('jimp');
 const adminRole = require('../middelware/checkRole');
 const deleteImage = require('../commonFunc/delete.image');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const Category = require('../model/categoryModel');
 
 
@@ -172,46 +172,60 @@ router.get('/get/:id', async (req, res) => {
 
 });
 
+const cpUpload2 = uploadFile.fields([
+    { name: 'frame', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 },
+    { name: 'referenceImage', maxCount: 1 },
+]);
 
-router.put('/update', auth, adminRole, uploadFile.single('frame'), async (req, res) => {
-    let { frameName, frame_size, coordinates, texts, id, frameUrl, imagePath } = req.body;
 
-    console.log('Framesize:', JSON.parse(frame_size));
-    console.log('Coordinates:', JSON.parse(coordinates));
+router.post('/update', auth, adminRole, cpUpload2, async (req, res) => {
 
-    frame_size = JSON.parse(frame_size);
-    coordinates = JSON.parse(coordinates);
-    if (texts) {
-        texts = JSON.parse(texts);
-    } else {
-        texts = [];
+
+    let { frameName, description, language, isActive, id } = req.body;
+
+    let frameUrl;
+    let thumbnail;
+    let referenceImage;
+
+    try {
+        frameUrl = await uploadAndGetFirebaseUrl(req.files['frame'][0]);
+    } catch (e) {
+        frameUrl = req.body.frame;
     }
 
-    texts.forEach((text, i) => {
-        let num = text.text.split(' ').filter(text => text.includes("<fname"));
-        console.log('Num:', num);
-        texts[i]["noOfName"] = num;
-    });
-
-    console.log('ss:', frame_size, 'cc:', coordinates, 'tt:', texts);
-
-    if (req.file) {
-        try {
-            frameUrl = await uploadAndGetFirebaseUrl(req);
-        } catch (error) {
-            console.error("Error:", error);
-        }
-
-        // await deleteImage(im);
-        imagePath = req.file.path;
+    try {
+        thumbnail = await uploadAndGetFirebaseUrl(req.files['thumbnail'][0]);
+    } catch (error) {
+        thumbnail = req.body.thumbnail;
     }
 
+    try {
+        referenceImage = await uploadAndGetFirebaseUrl(req.files['referenceImage'][0]);
+
+    } catch (error) {
+        referenceImage = req.body.referenceImage;
+    }
 
     try {
 
-        const results = await Frames.findByIdAndUpdate(id, { $set: { frameName, frameUrl, frame_size, texts, coordinates, path: imagePath } });
 
-        res.send({ success: true, message: "record updated successfully." });
+
+
+        const results = await Frames.findByIdAndUpdate(id, { $set: { frameName, frameUrl, thumbnail, referenceImage, isActive, description, language, user: req.user.id } }, { new: true });
+
+        const Language = await Category.findById(results.language);
+        if (!Language) {
+            return res.status(404).send({ success: false, error: 'Language not found' });
+        }
+        Language.data.frames.push(results._id);
+        const savedCategory = await Language.save();
+
+
+
+
+
+        res.send(results);
     } catch (error) {
 
         res.status(500).send("internal error: " + error.message);
@@ -224,6 +238,26 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
         const ress = await Frames.findById(req.params.id)
 
+        let data = [ress.thumbnail, ress.referenceImage, ress.frameUrl];
+
+
+        await Promise.all(data.map(async (url) => {
+            if (url) {
+
+                const fileUrl = url;
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete file:", fileName);
+                try {
+
+                    await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (e) {
+                    console.log("Error deleting file", e.message);
+                }
+            }
+
+        }))
 
         await Frames.deleteOne({ _id: req.params.id });
         // } else {
@@ -244,7 +278,7 @@ router.get('/publish/:postId', async (req, res) => {
 
     try {
 
-        const result = await pickAndKick.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
+        const result = await Frames.findByIdAndUpdate(postId, { $set: { isActive: true } }, { new: true });
 
         res.send({ success: true, message: "Successfully published", data: result });
 
@@ -261,7 +295,7 @@ router.get('/draft/:postId', async (req, res) => {
 
     try {
 
-        const result = await pickAndKick.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
+        const result = await Frames.findByIdAndUpdate(postId, { $set: { isActive: false } }, { new: true });
 
         res.send({ success: true, message: "Successfully published", data: result });
 
@@ -271,5 +305,15 @@ router.get('/draft/:postId', async (req, res) => {
 
     }
 });
+
+
+router.get("/all", async (req, res) => {
+    try {
+        const data = await Frames.find();
+        res.send(data);
+    } catch (error) {
+        res.status(500).send({ error: error.message, success: false });
+    }
+})
 
 module.exports = router;

@@ -404,11 +404,11 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
 
         referencesImage = await uploadAndGetFirebaseUrl(req.files["referencesImage"][0]);
     } catch (e) {
-        console.log(e)
+        console.log(e, "sdfs")
     }
 
     try {
-        const ress = await Quizzes.findByIdAndUpdate(id, { $set: { questions, results, description, language, category, isActive, subCategory, referencesImage } });
+        const ress = await Quizzes.findByIdAndUpdate(id, { $set: { questions, results, description, language, category, isActive, subCategory, referenceImage: referencesImage } });
 
         res.json(ress);
     } catch (error) {
@@ -482,7 +482,8 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
             console.log("Error deleting file", e.message);
         }
         await Promise.all(cont.questions.map(async (question) => {
-            if (question.questionType === 'image' && question.imageQuestion) {
+            if ((question.questionType === 'image' || question.questionType === 'both') && question.imageQuestion) {
+
                 const fileUrl = question.imageQuestion;
                 const encodedFileName = fileUrl.split('/').pop().split('?')[0];
                 const fileName = decodeURIComponent(encodedFileName);

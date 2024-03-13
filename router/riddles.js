@@ -3,7 +3,7 @@ const riddles = require('../model/riddles.model');
 const auth = require('../middelware/auth');
 
 const adminRole = require('../middelware/checkRole');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const path = require('path');
 const Category = require('../model/categoryModel');
 
@@ -184,14 +184,76 @@ router.post('/add-comment', auth, async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', auth, async (req, res) => {
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
+
+    const id = req.params.id;
+
+    const cont = await riddles.findById(id);
+
+    if (!cont) {
+        return res.status(404).json({ message: 'cont not found' });
+    }
 
     try {
-        await riddles.deleteOne({ _id: req.params.id });
-        res.status(200).json({ message: "Deleted successfully", success: true });
-    } catch (error) {
-        res.status(200).json({ message: error.message, success: false });
+        // Delete the file from Firebase Storage
+        const fileUrl = cont.referenceImage;
+        const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+        const fileName = decodeURIComponent(encodedFileName);
+        console.log("Attempting to delete file:", fileName);
+        try {
 
+            await bucket.file(fileName).delete();
+            console.log(fileName, "deleted");
+        } catch (e) {
+            console.log("Error deleting file", e.message);
+        }
+        await Promise.all(cont.questions.map(async (question) => {
+            if ((question.questionType === 'image' || question.questionType === 'both') && question.imageQuestion) {
+                const fileUrl = question.imageQuestion;
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete question image:", fileName);
+                try {
+                    await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (err) {
+                    console.error("Error deleting question image:", err);
+                    // Skip to the next iteration of the loop
+                }
+            }
+
+            console.log("Number of options:", question.options.length); // Log the length of question.options
+
+            if (question.optionType == 'image' && question.options.length > 0) {
+                // Use Promise.all() for option deletions
+                await Promise.all(question.options.map(async (option) => {
+
+                    const fileUrl = option.option;
+                    const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                    const fileName = decodeURIComponent(encodedFileName);
+                    console.log("Attempting to delete option image:", fileName);
+                    try {
+                        await bucket.file(fileName).delete();
+                        console.log(fileName, "deleted");
+                    } catch (err) {
+                        console.log("Error deleting option image:", err);
+                        // Skip to the next iteration of the loop
+                    }
+
+                }));
+            } else {
+                console.log("No options found for this question.");
+            }
+        }));
+
+
+
+        // Delete the feed from the database
+        await riddles.deleteOne({ _id: id });
+
+        res.send({ message: 'File deleted successfully', success: true });
+    } catch (err) {
+        res.status(500).send({ message: err.message, success: false });
     }
 
 });

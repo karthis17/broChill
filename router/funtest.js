@@ -87,18 +87,12 @@ router.post("/add-question", auth, adminRole, cpUpload1, async (req, res) => {
 });
 
 
-const cpup = uploadFile.fields([{
-    name: 'image', maxCount: 10
-}])
 
-router.post('/random-image/:id', cpup, async (req, res) => {
+router.post('/random-image/:id', async (req, res) => {
     try {
         const ress = await FunTest.findById(req.params.id);
 
-        const maskImages = await Promise.all(req.files['image'].map(async (file) => {
-            return await uploadAndGetFirebaseUrl(file);
-        }));
-
+        const maskImages = [req.body.image]
         const baseImage = ress.frames[0].frameUrl;
         const width = ress.frames[0].frame_size.width;
         const height = ress.frames[0].frame_size.height;
@@ -164,27 +158,13 @@ router.post('/random-text/:id', cpupp, async (req, res) => {
     }
 });
 
-const cpup1 = uploadFile.fields([{
-    name: 'image', maxCount: 10
-}])
 
-router.get('/single-percentage/:id', cpup1, async (req, res) => {
+router.get('/single-percentage/:id', auth, async (req, res) => {
     try {
         const re = await FunTest.findById(req.params.id);
 
-        let maskImages = []
+        const maskImages = req.body.image
 
-        try {
-
-            if (req.files['image']) {
-
-                maskImages = await Promise.all(req.files['image'].map(async (file) => {
-                    return await uploadAndGetFirebaseUrl(file);
-                }));
-            }
-        } catch (err) {
-            console.log(err);
-        }
 
 
         const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
@@ -403,10 +383,31 @@ router.post('/add-comment', auth, async (req, res) => {
 
 router.delete('/delete/:id', auth, adminRole, async (req, res) => {
     try {
-        const response = await FunTest.findById(req.params.id)
+        const ress = await FunTest.findById(req.params.id);
 
 
-        deleteImage(path.join(__dirname, `../${await response.path}`));
+        let data = [ress.thumbnail, ress.referenceImage, ress.frameUrl, ...ress.frames.map(f => f.frameUrl)];
+
+
+        await Promise.all(data.map(async (url) => {
+            if (url) {
+
+                const fileUrl = url;
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete file:", fileName);
+                try {
+
+                    await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (e) {
+                    console.log("Error deleting file", e.message);
+                }
+            }
+
+        }))
+
+
         await FunTest.deleteOne({ _id: req.params.id });
 
         res.send({ message: "deleted successfully" });
@@ -455,7 +456,7 @@ async function applyMask(baseImagePath, maskImages, outputPath, coordinates, bwi
         const image = await Jimp.read(baseImagePath);
 
         image.resize(+bwidth, +bheight);
-        if (maskImages.length > 0) {
+        if (maskImages) {
             for (let i = 0; i < coordinates.length; i++) {
                 let coordinate = coordinates[i];
                 console.log(coordinate)
@@ -568,9 +569,7 @@ router.post("/update", auth, adminRole, cpUpload2, async (req, res) => {
 
     let i = 0
     await Promise.all(frames.map(async (frame, j) => {
-        try {
-            console.log(frame.frameUrl)
-        } catch (e) {
+        if (!frame.frameUrl) {
             const frameUrl = await uploadAndGetFirebaseUrl(req.files["frame"][i++]);
             frames[j]['frameUrl'] = frameUrl;
         }

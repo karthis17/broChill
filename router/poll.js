@@ -2,7 +2,7 @@ const router = require('express').Router();
 const adminRole = require('../middelware/checkRole');
 const Poll = require('../model/poll.model');
 const auth = require('../middelware/auth');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const Category = require('../model/categoryModel');
 
 
@@ -271,13 +271,74 @@ router.get('/view/:id', async (req, res) => {
     }
 });
 
-router.delete('/delete/:pollId', auth, adminRole, async (req, res) => {
+
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
+
+    const id = req.params.id;
+
+    const cont = await Poll.findById(id);
+
+    if (!cont) {
+        return res.status(404).json({ message: 'cont not found' });
+    }
 
     try {
-        await Poll.deleteOne({ _id: req.params.pollId });
-        res.status(200).json({ message: "poll deleted successfully", success: true });
-    } catch (error) {
-        res.status(500).json({ message: "Internal server error", success: false, error: error.message });
+        // Delete the file from Firebase Storage
+        const fileUrl = cont.thumbnail;
+        const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+        const fileName = decodeURIComponent(encodedFileName);
+        console.log("Attempting to delete file:", fileName);
+        try {
+
+            await bucket.file(fileName).delete();
+            console.log(fileName, "deleted");
+        } catch (e) {
+            console.log("Error deleting file", e.message);
+        }
+        if ((cont.questionType === 'image' || cont.questionType === 'both') && cont.imageQuestion) {
+            const fileUrl = cont.imageQuestion;
+            const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+            const fileName = decodeURIComponent(encodedFileName);
+            console.log("Attempting to delete question image:", fileName);
+            try {
+                await bucket.file(fileName).delete();
+                console.log(fileName, "deleted");
+            } catch (err) {
+                console.error("Error deleting question image:", err);
+                // Skip to the next iteration of the loop
+            }
+        }
+
+        console.log("Number of options:", cont.options.length); // Log the length of question.options
+
+        if (cont.optionType == 'image' && cont.options.length > 0) {
+            // Use Promise.all() for option deletions
+            await Promise.all(cont.options.map(async (option) => {
+
+                const fileUrl = option.option;
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete option image:", fileName);
+                try {
+                    await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (err) {
+                    console.log("Error deleting option image:", err);
+                    // Skip to the next iteration of the loop
+                }
+
+            }));
+        } else {
+            console.log("No options found for this question.");
+        }
+
+
+        // Delete the feed from the database
+        await Poll.deleteOne({ _id: id });
+
+        res.send({ message: 'File deleted successfully', success: true });
+    } catch (err) {
+        res.status(500).send({ message: err.message, success: false });
     }
 
 });
@@ -301,7 +362,7 @@ router.put('/update', auth, adminRole, cpUpload2, async (req, res) => {
 
 
     if (req.files['imageQuestion']) {
-        imageQuestion = req.files['imageQuestion'][0];
+        imageQuestion = await uploadAndGetFirebaseUrl(req.files['imageQuestion'][0]);
     }
 
     let i = 0;

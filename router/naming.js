@@ -2,7 +2,7 @@ const auth = require('../middelware/auth');
 const Nameing = require('../model/nameing.model');
 const router = require('express').Router();
 const adminRole = require('../middelware/checkRole');
-const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
+const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const path = require('path');
 const Jimp = require('jimp');
 const Category = require('../model/categoryModel');
@@ -556,6 +556,42 @@ router.post('/update', auth, adminRole, cpUpload1, async (req, res) => {
         res.send(result)
     } catch (error) {
         res.status(500).send({ message: "Error creating image", error: error.message });
+    }
+});
+
+
+router.delete('/delete/:id', auth, adminRole, async (req, res) => {
+    try {
+        const ress = await Nameing.findById(req.params.id);
+
+
+        let data = [ress.thumbnail, ress.frameUrl, ...ress.frames.map(f => f.frameUrl)];
+
+
+        await Promise.all(data.map(async (url) => {
+            if (url) {
+
+                const fileUrl = url;
+                const encodedFileName = fileUrl.split('/').pop().split('?')[0];
+                const fileName = decodeURIComponent(encodedFileName);
+                console.log("Attempting to delete file:", fileName);
+                try {
+
+                    await bucket.file(fileName).delete();
+                    console.log(fileName, "deleted");
+                } catch (e) {
+                    console.log("Error deleting file", e.message);
+                }
+            }
+
+        }))
+
+
+        await Nameing.deleteOne({ _id: req.params.id });
+
+        res.send({ message: "deleted successfully" });
+    } catch (error) {
+        res.status(500).send({ message: "internal error: " + error.message })
     }
 });
 

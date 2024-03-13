@@ -12,8 +12,8 @@ module.exports = mongoose.model("contest", {
 
     questions: [{
 
-        textQuestion: { type: String, required: true },
-        imageQuestion: { type: String, required: true },
+        textQuestion: { type: String, },
+        imageQuestion: { type: String, },
         questionType: { type: String, required: true },
         optionType: String,
         options: [{
