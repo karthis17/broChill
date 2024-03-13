@@ -454,7 +454,7 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
     const id = req.params.id;
 
-    const cont = await contest.findById(id);
+    const cont = await general.findById(id);
 
     if (!cont) {
         return res.status(404).json({ message: 'cont not found' });
@@ -536,7 +536,7 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
         }
 
         // Delete the feed from the database
-        await contest.deleteOne({ _id: id });
+        await general.deleteOne({ _id: id });
 
         res.send({ message: 'File deleted successfully', success: true });
     } catch (err) {
