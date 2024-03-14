@@ -95,6 +95,7 @@ router.post('/random-image/:id', async (req, res) => {
 
         let frame;
         if (req.body.frameId) {
+            console.log(req.body.frameId);
 
             const frameIdObjectId = new ObjectId(req.body.frameId);
 
@@ -186,7 +187,7 @@ const cpup1 = uploadFile.fields([{
     name: 'image', maxCount: 10
 }])
 
-router.get('/single-percentage/:id', auth, cpup1, async (req, res) => {
+router.post('/single-percentage/:id', cpup1, async (req, res) => {
     try {
         const re = await FunTest.findById(req.params.id);
 
