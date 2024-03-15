@@ -74,13 +74,15 @@ router.post('/:pollId/vote', auth, async (req, res) => {
         // option.votedUsers.push(req.user.id);
         option.vote = option.vote ? parseInt(option.vote) + 1 : 1;
 
-        let existingUser = poll.totalVotes.find(opt => opt.user === req.user.id);
+        let existingUser = await poll.totalVotes.find(opt => opt.votedUser.toString() === req.user.id.toString());
+
+        console.log(existingUser);
 
         if (existingUser) {
 
-            let Votedoption = poll.options.find(opt => opt._id == existingUser.option_id);
+            let Votedoption = poll.options.find(opt => opt._id.toString() == existingUser.option_id.toString());
 
-            Votedoption.vote = parseInt(option.vote) - 1
+            Votedoption.vote = parseInt(Votedoption.vote) - 1
 
             existingUser.option_id = optionId;
 
@@ -99,7 +101,7 @@ router.post('/:pollId/vote', auth, async (req, res) => {
         // Save the updated poll
         await poll.save();
 
-        res.status(200).json({ message: "Vote recorded successfully", poll: poll.options });
+        res.status(200).json({ message: "Vote recorded successfully", poll: { options: poll.options, totalVotes: poll.totalVotes } });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -117,7 +119,7 @@ const cpUpload1 = uploadFile.fields([
 
 router.post('/add-poll', auth, adminRole, cpUpload1, async (req, res) => {
     let { textQuestion, options, isActive, description, language, questionType, optionType } = req.body;
-    console.log(req.body, req.file)
+    console.log(req.body, req.files)
 
     let imageQuestion = "";
     if (req.files['imageQuestion']) {
