@@ -124,6 +124,7 @@ router.post('/:postId/vote', auth, async (req, res) => {
 
     const { questionId, optionId } = req.body;
 
+    console.log(questionId, optionId);
 
     try {
         // Find the poll by ID
@@ -139,24 +140,39 @@ router.post('/:postId/vote', auth, async (req, res) => {
         }
 
         // Check if the option exists in the question
-        const option = question.options.find(opt => opt._id.equals(new mongoose.Types.ObjectId(optionId)));
+        const option = question.options.find(opt => opt._id == optionId);
         if (!option) {
             return res.status(404).json({ error: "Option not found in the question" });
         }
 
-        // Add user ID to votedUsers array
-        option.votedUsers.push(req.user.id);
-
-        // Update the vote count for the selected option
+        // option.votedUsers.push(req.user.id);
         option.vote = option.vote ? parseInt(option.vote) + 1 : 1;
 
-        // Increment the total votes for the question
-        question.totalVotes = (question.totalVotes || 0) + 1;
+        let existingUser = await question.totalVotes.find(opt => opt.votedUser.toString() === req.user.id);
+
+        console.log(existingUser);
+
+        if (existingUser) {
+
+            let Votedoption = question.options.find(opt => opt._id.toString() == existingUser.option_id.toString());
+
+            Votedoption.vote = parseInt(Votedoption.vote) - 1
+
+            existingUser.option_id = optionId;
+
+        } else {
+
+            question.totalVotes.push({ votedUser: req.user.id, option_id: option._id });
+        }
+
+
+
 
         // Calculate the percentage of votes for each option
         question.options.forEach(opt => {
-            opt.percentage = ((opt.vote || 0) / question.totalVotes) * 100;
+            opt.percentage = ((opt.vote || 0) / question.totalVotes.length) * 100;
         });
+
 
         // Save the updated poll
         await poll.save();
