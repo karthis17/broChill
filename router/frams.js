@@ -63,8 +63,9 @@ router.post('/upload-frame', auth, adminRole, cpUpload1, async (req, res) => {
 });
 
 router.get('/get-all', async function (req, res) {
-    const lang = req.params.lang;
+    const lang = req.query.lang;
 
+    console.log(lang);
 
     try {
         const data = await Frames.find({ language: lang, isActive: true }).populate({

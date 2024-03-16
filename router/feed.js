@@ -91,14 +91,14 @@ router.get("/category/:category", async (req, res) => {
 router.get("/get-all", async (req, res) => {
     const lang = req.query.lang;
     try {
-        const feed = await feeds.find({ language: lang }).populate({
+        const feed = await feeds.find({ language: lang, isActive: true }).populate({
             path: 'user',
-            select: -password
+            select: '-password'
         }).populate({
             path: 'comments',
             populate: {
-                psth: 'user',
-                select: -password
+                path: 'user',
+                select: '-password'
             }
         })
 

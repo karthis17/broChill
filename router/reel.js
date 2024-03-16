@@ -64,12 +64,12 @@ router.get('/get-reel/:id', async (req, res) => {
     try {
         const reel = await reels.findById(req.params.id).populate({
             path: 'user',
-            select: -password
+            select: '-password'
         }).populate({
             path: 'comments',
             populate: {
                 psth: 'user',
-                select: -password
+                select: '-password'
             }
         })
 
@@ -86,17 +86,18 @@ router.get("/get-all", async (req, res) => {
     try {
         const feed = await reels.find({ language: lang, isActive: true }).populate({
             path: 'user',
-            select: -password
+            select: '-password'
         }).populate({
             path: 'comments',
             populate: {
-                psth: 'user',
-                select: -password
+                path: 'user',
+                select: '-password'
             }
         })
 
         res.send(feed);
     } catch (error) {
+        console.log(error);
         res.status(500).json({ message: error.message });
     }
 });

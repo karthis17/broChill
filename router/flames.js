@@ -39,16 +39,6 @@ router.post('/add-image', auth, adminRole, cpUpload, async (req, res) => {
 });
 
 
-router.get('/get-all', async (req, res) => {
-    try {
-        const result = await Flames.find()
-        res.send(result);
-    }
-    catch (error) {
-        res.status(500).send({ message: "Error, error: " + error.message });
-    }
-})
-
 
 router.post('/', auth, async (req, res) => {
     const { name1, name2 } = req.body;
