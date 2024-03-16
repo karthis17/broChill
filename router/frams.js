@@ -114,17 +114,19 @@ router.post('/:postId/like', auth, async (req, res) => {
     }
 });
 
-router.post('/add-comment', auth, async (req, res) => {
-    if (!req.body.frame_id) res.status(404).json({ message: 'frame id is required' });
-
+router.post('/add-comment/:id', auth, async (req, res) => {
+    // if (!req.body.id) res.status(404).json({ message: 'id is required' });
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await Frames.findByIdAndUpdate(req.body.frame_id, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true })
-        res.status(200).json({
-            message: "comment added successfully",
-            data: response
-        })
+        const response = await Frames.findByIdAndUpdate(req.params.id, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user',
+                select: ['-password', '-post']
+            }
+        });
+        res.status(200).json(response);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
