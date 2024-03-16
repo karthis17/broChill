@@ -108,8 +108,10 @@ router.post('/:postId/like', auth, async (req, res) => {
         const userId = req.user.id; // Assuming user is authenticated and user ID is available in request
 
         // Check if the post is already liked by the user
-        const post = await reels.findById(postId);
+        const post = await reels.findOne({ customId: postId });
         const isLiked = post.likes.includes(userId);
+
+        let like = false;
 
         // Update like status based on current state
         if (isLiked) {
@@ -117,13 +119,14 @@ router.post('/:postId/like', auth, async (req, res) => {
             post.likes.pull(userId);
         } else {
             // If not liked, like the post
+            like = true;
             post.likes.push(userId);
         }
 
         // Save the updated post
         await post.save();
 
-        res.status(200).json({ success: true, message: 'Post liked/unliked successfully.' });
+        res.status(200).json({ success: true, like, message: 'Post liked/unliked successfully.' });
     } catch (error) {
         console.error('Error liking/unliking post:', error);
         res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });
@@ -135,7 +138,7 @@ router.post('/:postId/like', auth, async (req, res) => {
 router.get('/share/:id', async (req, res) => {
     try {
         const postId = req.params.id;
-        const response = await reels.findByIdAndUpdate(postId, { $inc: { shares: 1 } }, { new: true })
+        const response = await reels.findOneAndUpdate({ customId: postId }, { $inc: { shares: 1 } }, { new: true })
         res.json(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
@@ -147,7 +150,7 @@ router.get('/view/:id', async (req, res) => {
     const id = req.params.id;
 
     try {
-        const response = await reels.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
+        const response = await reels.findOneAndUpdate({ customId: id }, { $inc: { views: 1 } }, { new: true });
         res.json(response);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
@@ -160,7 +163,7 @@ router.post('/add-comment/:id', auth, async (req, res) => {
     if (!req.body.comment) res.status(404).json({ message: 'Comment is required' });
 
     try {
-        const response = await reels.findByIdAndUpdate(req.params.id, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true }).populate({
+        const response = await reels.findOneAndUpdate({ customId: req.params.id }, { $push: { comments: { text: req.body.comment, user: req.user.id } } }, { new: true }).populate({
             path: 'comments',
             populate: {
                 path: 'user',

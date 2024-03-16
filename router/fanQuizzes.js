@@ -220,24 +220,24 @@ router.post('/:postId/like', auth, async (req, res) => {
         const isLiked = post.likes.includes(userId);
 
         let like = false;
-        let dislike = false;
+
 
         // Update like status based on current state
         if (isLiked) {
 
             // If already liked, unlike the post
             post.likes.pull(userId);
-            like = true;
         } else {
             // If not liked, like the post
             post.likes.push(userId);
-            dislike = true;
+            like = true;
+
         }
 
         // Save the updated post
         await post.save();
 
-        res.status(200).json({ success: true, like, dislike, message: 'Post liked/unliked successfully.' });
+        res.status(200).json({ success: true, like, message: 'Post liked/unliked successfully.' });
     } catch (error) {
         console.error('Error liking/unliking post:', error);
         res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });

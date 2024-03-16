@@ -259,6 +259,38 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
 });
 
+
+router.post('/:postId/like', auth, async (req, res) => {
+    try {
+        const postId = req.params.postId;
+        const userId = req.user.id; // Assuming user is authenticated and user ID is available in request
+
+        // Check if the post is already liked by the user
+        const post = await pickAndKick.findById(postId);
+        const isLiked = post.likes.includes(userId);
+
+        let like = false;
+
+        // Update like status based on current state
+        if (isLiked) {
+            // If already liked, unlike the post
+            post.likes.pull(userId);
+        } else {
+            // If not liked, like the post
+            like = true;
+            post.likes.push(userId);
+        }
+
+        // Save the updated post
+        await post.save();
+
+        res.status(200).json({ success: true, like, message: 'Post liked/unliked successfully.' });
+    } catch (error) {
+        console.error('Error liking/unliking post:', error);
+        res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });
+    }
+});
+
 router.get('/share/:id', async (req, res) => {
     try {
         const postId = req.params.id;
