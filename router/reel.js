@@ -6,20 +6,42 @@ const adminRole = require('../middelware/checkRole');
 const Category = require('../model/categoryModel');
 
 
-router.post('/upload-reel', auth, adminRole, uploadFile.single('reel'), async (req, res) => {
+const upp = uploadFile.fields([{
+    name: "reel",
+    maxCount: 1
+}, {
+    name: 'thumbnail',
+    maxCount: 1
+}])
+
+router.post('/upload-reel', auth, adminRole, upp, async (req, res) => {
 
     const { language, description, category, title, isActive } = req.body;
 
     try {
-        if (!req.file) {
-            return res.status(400).json({ message: 'No file uploaded' });
+
+        let fileUrl;
+        let thumbnail;
+        try {
+
+            fileUrl = await uploadAndGetFirebaseUrl(req.files['reel'][0]);
+        } catch (e) {
+            return res.status(404).send({ success: false, message: "reel upload failed" });
         }
-        const fileUrl = await uploadAndGetFirebaseUrl(req)
+
+        try {
+            thumbnail = await uploadAndGetFirebaseUrl(req.files['thumbnail'][0]);
+        } catch (error) {
+            return res.status(404).send({ success: false, message: "thumbnail upload failed" });
+
+        }
+
+
+        const reel = await reels.create({ category, title, fileUrl, user: req.user.id, language, isActive, description, thumbnail });
 
         if (!description) {
             return res.status(400).json({ message: 'Description is required' });
         }
-        const reel = await reels.create({ category, title, fileUrl, user: req.user.id, language, isActive, description });
 
         const Language = await Category.findById(reel.language);
         if (!Language) {
@@ -210,15 +232,18 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 });
 
 
-router.put("/update", auth, adminRole, uploadFile.single("reel"), async (req, res) => {
+router.put("/update", auth, adminRole, upp, async (req, res) => {
 
     console.log(req.body)
-    let { description, category, title, language, isActive, id, fileUrl } = req.body;
+    let { description, category, title, language, isActive, id, fileUrl, thumbnail } = req.body;
     try {
-        if (req.file) {
-            fileUrl = await uploadAndGetFirebaseUrl(req)
+        if ('reel' in req.files) {
+            fileUrl = await uploadAndGetFirebaseUrl(req.files['reel'][0])
         }
 
+        if ('thumbnail' in req.files) {
+            thumbnail = await uploadAndGetFirebaseUrl(req.files['thumbnail'][0]);
+        }
         console.log(req.file)
 
 
@@ -226,7 +251,7 @@ router.put("/update", auth, adminRole, uploadFile.single("reel"), async (req, re
             return res.status(400).json({ message: 'Description is required' });
         }
 
-        const feed = await reels.findByIdAndUpdate(id, { $set: { category, title, fileUrl, description, language, isActive } });
+        const feed = await reels.findByIdAndUpdate(id, { $set: { category, title, fileUrl, description, language, isActive, thumbnail } });
         console.log(feed);
 
         res.status(201).json(feed);
