@@ -123,13 +123,13 @@ router.post('/random-image/:id', async (req, res) => {
         const height = frame.frame_size.height;
         const coordinates = frame.coordinates;
 
-        const outputPath = path.join(__dirname, `../uploads/${req.params.id}.png`);
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${Date.now()}.png`);
 
         console.log(outputPath);
 
         await applyMaskImg(baseImage, maskImages, outputPath, coordinates, width, height);
 
-        res.send({ _id: frame._id, result: `${req.protocol}://${req.get('host')}/${req.params.id}.png` });
+        res.send({ _id: frame._id, result: `${req.protocol}://${req.get('host')}/${req.params.id}-${Date.now()}.png` });
     } catch (error) {
         console.error('An error occurred:', error);
         res.status(500).send(error.message);
@@ -170,13 +170,13 @@ router.post('/random-text/:id', cpupp, async (req, res) => {
 
         const textPosition = ress.frames[0].textPosition;
         const text = await ress.texts[randomNumber];
-        const outputPath = path.join(__dirname, `../uploads/${req.params.id}.png`);
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${Date.now()}.png`);
 
         console.log(outputPath);
 
         await applyMask(baseImage, maskImages, outputPath, coordinates, width, height, textPosition, text);
 
-        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id}.png` });
+        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id}-${Date.now()}.png` });
     } catch (error) {
         console.error('An error occurred:', error);
         res.status(500).send(error.message);
@@ -213,14 +213,14 @@ router.post('/single-percentage/:id', cpup1, async (req, res) => {
         const width = re.frames[0].frame_size.width;
         const height = re.frames[0].frame_size.height;
         const percentage = await re.frames[0].percentagePosition;
-        const outputPath = path.join(__dirname, `../uploads/${req.params.id + await re.frames[0]._id}.png`);
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id + await re.frames[0]._id}-${Date.now()}.png`);
 
 
         // await the result of applyMask
         await applyMask(baseImage, maskImages, outputPath, coordinates, width, height, percentage, randomNumber);
 
 
-        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id + await re.frames[0]._id}.png` });
+        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id + await re.frames[0]._id}-${Date.now()}.png` });
     } catch (error) {
         res.status(500).send(error.message);
     }
@@ -256,14 +256,14 @@ router.post('/double-percentage/:id', cpup2, async (req, res) => {
             const height = await frame.frame_size.height
             const coord = await frame.coordinates;
             const percentage = await frame.percentagePosition;
-            const outputPath = path.join(__dirname, `../uploads/${req.params.id + await frame._id}.png`);
+            const outputPath = path.join(__dirname, `../uploads/${req.params.id + await frame._id}-${Date.now()}.png`);
 
             // await the result of applyMask
 
             await applyMask(baseImage, maskImages, outputPath, coord, width, height, percentage, randomNumber);
 
             return {
-                result1: `${req.protocol}://${req.get('host')}/${req.params.id + await frame._id}.png`,
+                result1: `${req.protocol}://${req.get('host')}/${req.params.id + await frame._id}-${Date.now()}.png`,
             };
         }));
 
@@ -304,7 +304,7 @@ router.post('/percentage-range/:id', cpup3, async (req, res) => {
 
         const baseImage = await re.frames[0].frameUrl;
         const coord = await re.frames[0].coordinates;
-        const outputPath = path.join(__dirname, `../uploads/${req.params.id}.png`);
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${Date.now()}.png`);
 
         const width = re.frames[0].frame_size.width;
         const height = re.frames[0].frame_size.height;
