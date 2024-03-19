@@ -250,7 +250,7 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 router.put("/update", auth, adminRole, upp, async (req, res) => {
 
     console.log(req.body)
-    let { description, category, title, language, isActive, id, fileUrl, thumbnail } = req.body;
+    let { description, subCategory, title, language, isActive, id, fileUrl, thumbnail } = req.body;
     try {
         if ('reel' in req.files) {
             fileUrl = await uploadAndGetFirebaseUrl(req.files['reel'][0])
@@ -266,7 +266,7 @@ router.put("/update", auth, adminRole, upp, async (req, res) => {
             return res.status(400).json({ message: 'Description is required' });
         }
 
-        const feed = await reels.findByIdAndUpdate(id, { $set: { category, title, fileUrl, description, language, isActive, thumbnail } });
+        const feed = await reels.findByIdAndUpdate(id, { $set: { subCategory, title, fileUrl, description, language, isActive, thumbnail } });
         console.log(feed);
 
         res.status(201).json(feed);

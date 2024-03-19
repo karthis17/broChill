@@ -20,7 +20,7 @@ const cpUpload = uploadFile.fields([
 
 router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
-    let { questions, results, description, language, resultImage, subCategory, subCategoryImage, isActive } = req.body;
+    let { questions, results, description, language, resultImage, subCategory, isActive } = req.body;
 
     console.log(req.body)
 
@@ -326,7 +326,7 @@ const cpUpload1 = uploadFile.fields([
 router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
 
 
-    let { questions, results, description, language, resultImage, category, subCategory, referencesImage, id, isActive } = req.body;
+    let { questions, results, description, language, resultImage, subCategory, referencesImage, id, isActive } = req.body;
 
     if (!questions) {
         res.status(404).send({ message: "questions not found", success: false });
@@ -386,7 +386,7 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
     }
 
     try {
-        const ress = await contest.findByIdAndUpdate(id, { $set: { questions, results, description, language, resultImage, category, isActive, subCategory, referencesImage } }, { new: true });
+        const ress = await contest.findByIdAndUpdate(id, { $set: { questions, results, description, language, resultImage, isActive, subCategory, referencesImage } }, { new: true });
 
         res.json(ress);
     } catch (error) {
