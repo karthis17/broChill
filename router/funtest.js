@@ -187,10 +187,7 @@ router.post('/single-percentage/:id', async (req, res) => {
         const width = re.frames[0].frame_size.width;
         const height = re.frames[0].frame_size.height;
         const percentage = await re.frames[0].percentagePosition;
-        const name = ress.frames[0].nameCoord;
-        const date = Date.now();
-
-        const outputPath = path.join(__dirname, `../uploads/${req.params.id + await re.frames[0]._id}-${date}.png`);
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${date}.png`);
 
 
         // await the result of applyMask
@@ -218,16 +215,14 @@ router.post('/double-percentage/:id', async (req, res) => {
 
             const coord = await frame.coordinates;
             const percentage = await frame.percentagePosition;
-            const date = Date.now();
-
-            const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${date}.png`);
+            const outputPath = path.join(__dirname, `../uploads/${req.params.id + await frame._id}-${date}.png`);
 
             // await the result of applyMask
 
             await applyMask(baseImage, image, outputPath, coord, width, height, percentage, randomNumber, req.body.username, name);
 
             return {
-                result1: `${req.protocol}://${req.get('host')}/${req.params.id}-${date}.png`,
+                result1: `${req.protocol}://${req.get('host')}/${req.params.id + await frame._id}-${date}.png`,
             };
         }));
 
@@ -266,7 +261,6 @@ router.post('/percentage-range/:id', async (req, res) => {
 
 
         res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id}-${date}.png` });
-
     } catch (error) {
         res.status(500).send(error.message);
     }
