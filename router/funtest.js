@@ -125,6 +125,8 @@ router.post('/random-image/:id', async (req, res) => {
         const date = Date.now();
 
 
+
+
         const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${date}.png`);
 
         console.log(outputPath);
@@ -186,6 +188,9 @@ router.post('/single-percentage/:id', async (req, res) => {
         const coordinates = re.frames[0].coordinates;
         const width = re.frames[0].frame_size.width;
         const height = re.frames[0].frame_size.height;
+        const date = Date.now();
+        const name = await re.frames[0].nameCoord;
+
         const percentage = await re.frames[0].percentagePosition;
         const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${date}.png`);
 
@@ -212,6 +217,7 @@ router.post('/double-percentage/:id', async (req, res) => {
             const width = await frame.frame_size.width
             const height = await frame.frame_size.height
             const name = await frame.nameCoord;
+            const date = Date.now();
 
             const coord = await frame.coordinates;
             const percentage = await frame.percentagePosition;
@@ -252,8 +258,8 @@ router.post('/percentage-range/:id', async (req, res) => {
 
         const width = re.frames[0].frame_size.width;
         const height = re.frames[0].frame_size.height;
-        const percentage = await re.frames[0].textPosition;
-        const name = ress.frames[0].nameCoord;
+        const percentage = await re.frames[0].percentagePosition;
+        const name = re.frames[0].nameCoord;
 
         // await the result of applyMask
         console.log(baseImage, image, outputPath, coord, width, height, percentage, number);
