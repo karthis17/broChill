@@ -314,7 +314,7 @@ router.post('/percentage-range/:id', cpup3, async (req, res) => {
         let ress = await applyMask(baseImage, maskImages, outputPath, coord, width, height, percentage, `${number.value}`);
 
 
-        res.send({ _id: req.params.id, result: ress });
+        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id}-${Date.now()}.png` });
     } catch (error) {
         res.status(500).send(error.message);
     }
