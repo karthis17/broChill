@@ -4,8 +4,8 @@ module.exports = mongoose.model("generalQuestion", {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
 
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
-    category: String,
-    subCategory: String,
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+
 
     questions: [{
 
@@ -31,7 +31,8 @@ module.exports = mongoose.model("generalQuestion", {
             width: { type: Number },
             height: { type: Number },
         },
-        coordinates: [],
+        coordinates: {},
+        nameCoord: {},
         scorePosition: {
             x: Number,
             y: Number,

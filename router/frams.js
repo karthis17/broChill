@@ -158,11 +158,16 @@ router.get('/view/:id', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 router.get('/get/:id', async (req, res) => {
+
+    if (!req.params.id) {
+        res.status(404).json({ message: 'Missing quizze id' });
+    }
     const lang = req.query.lang;
 
     try {
-        const response = await Frames.findById(req.params.id).populate({
+        const con = await Frames.find({ subCategory: req.params.id, language: lang, isActive: true }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -172,11 +177,10 @@ router.get('/get/:id', async (req, res) => {
                 select: '-password'
             }
         });
-        res.send(response);
+        res.json(con);
     } catch (error) {
-        res.status(500).json({ message: "Internal server error", error: error.message });
+        res.status(500).json(error.message);
     }
-
 });
 
 const cpUpload2 = uploadFile.fields([

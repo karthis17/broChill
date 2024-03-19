@@ -3,7 +3,6 @@ const router = require('express').Router();
 const auth = require('../middelware/auth'); const multer = require('multer');
 const path = require('path');
 const Jimp = require('jimp');
-const deleteImage = require('../commonFunc/delete.image');
 const adminRole = require('../middelware/checkRole');
 const { uploadFile, uploadAndGetFirebaseUrl, bucket } = require('../commonFunc/firebase');
 const Category = require('../model/categoryModel');
@@ -117,19 +116,22 @@ router.post('/random-image/:id', async (req, res) => {
             frame = ress.frames[0]
         }
 
-        const maskImages = [req.body.image]
+        const maskImages = req.body.image
         const baseImage = frame.frameUrl;
         const width = frame.frame_size.width;
         const height = frame.frame_size.height;
         const coordinates = frame.coordinates;
+        const name = frame.nameCoord;
+        const date = Date.now();
 
-        const outputPath = path.join(__dirname, `../uploads/${req.params.id}.png`);
+
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${date}.png`);
 
         console.log(outputPath);
 
-        await applyMaskImg(baseImage, maskImages, outputPath, coordinates, width, height);
+        await applyMaskImg(baseImage, maskImages, outputPath, coordinates, req.body.username, name, width, height);
 
-        res.send({ _id: frame._id, result: `${req.protocol}://${req.get('host')}/${req.params.id}.png` });
+        res.send({ _id: frame._id, result: `${req.protocol}://${req.get('host')}/${req.params.id}-${date}.png` });
     } catch (error) {
         console.error('An error occurred:', error);
         res.status(500).send(error.message);
@@ -137,74 +139,46 @@ router.post('/random-image/:id', async (req, res) => {
 });
 
 
-const cpupp = uploadFile.fields([{
-    name: 'image', maxCount: 10
-}])
 
-router.post('/random-text/:id', cpupp, async (req, res) => {
+router.post('/random-text/:id', async (req, res) => {
 
     try {
         const ress = await FunTest.findById(req.params.id);
-
-        let maskImages = []
-
-        try {
-            if (req.files['image']) {
-
-                maskImages = await Promise.all(req.files['image'].map(async (file) => {
-                    return await uploadAndGetFirebaseUrl(file);
-                }));
-            }
-        }
-        catch (e) {
-            console.log(e)
-        }
-
+        const image = req.body.image;
 
         let randomNumber = Math.floor(Math.random() * await ress.texts.length);
 
         const baseImage = ress.frames[0].frameUrl;
+        console.log(baseImage);
         const width = ress.frames[0].frame_size.width;
         const height = ress.frames[0].frame_size.height;
         const coordinates = ress.frames[0].coordinates;
 
         const textPosition = ress.frames[0].textPosition;
+        const name = ress.frames[0].nameCoord;
+
+        const date = Date.now();
+
         const text = await ress.texts[randomNumber];
-        const outputPath = path.join(__dirname, `../uploads/${req.params.id}.png`);
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${date}.png`);
 
         console.log(outputPath);
 
-        await applyMask(baseImage, maskImages, outputPath, coordinates, width, height, textPosition, text);
+        await applyMask(baseImage, image, outputPath, coordinates, width, height, textPosition, text, req.body.username, name);
 
-        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id}.png` });
+        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id}-${date}.png` });
     } catch (error) {
         console.error('An error occurred:', error);
         res.status(500).send(error.message);
     }
 });
 
-const cpup1 = uploadFile.fields([{
-    name: 'image', maxCount: 10
-}])
 
-router.post('/single-percentage/:id', cpup1, async (req, res) => {
+router.post('/single-percentage/:id', async (req, res) => {
     try {
         const re = await FunTest.findById(req.params.id);
 
-
-        let maskImages = []
-
-        try {
-
-            if (req.files['image']) {
-
-                maskImages = await Promise.all(req.files['image'].map(async (file) => {
-                    return await uploadAndGetFirebaseUrl(file);
-                }));
-            }
-        } catch (e) {
-            console.log(e);
-        }
+        const image = req.body.image;
 
 
         const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
@@ -213,57 +187,47 @@ router.post('/single-percentage/:id', cpup1, async (req, res) => {
         const width = re.frames[0].frame_size.width;
         const height = re.frames[0].frame_size.height;
         const percentage = await re.frames[0].percentagePosition;
-        const outputPath = path.join(__dirname, `../uploads/${req.params.id + await re.frames[0]._id}.png`);
+        const name = ress.frames[0].nameCoord;
+        const date = Date.now();
+
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id + await re.frames[0]._id}-${date}.png`);
 
 
         // await the result of applyMask
-        await applyMask(baseImage, maskImages, outputPath, coordinates, width, height, percentage, randomNumber);
+        await applyMask(baseImage, image, outputPath, coordinates, width, height, percentage, randomNumber, req.body.username, name);
 
 
-        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id + await re.frames[0]._id}.png` });
+        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id}-${date}.png` });
     } catch (error) {
         res.status(500).send(error.message);
     }
 })
 
-const cpup2 = uploadFile.fields([{
-    name: 'image', maxCount: 10
-}])
 
-router.post('/double-percentage/:id', cpup2, async (req, res) => {
+router.post('/double-percentage/:id', async (req, res) => {
 
     try {
         const ress = await FunTest.findById(req.params.id);
-
-        let maskImages = []
-
-        try {
-
-            if (req.files['image']) {
-
-                maskImages = await Promise.all(req.files['image'].map(async (file) => {
-                    return await uploadAndGetFirebaseUrl(file);
-                }));
-            }
-        }
-        catch (err) {
-            console.log(err);
-        }
+        const image = req.body.image;
         const result = await Promise.all(ress.frames.map(async (frame, i) => {
             const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
             const baseImage = await frame.frameUrl;
             const width = await frame.frame_size.width
             const height = await frame.frame_size.height
+            const name = await frame.nameCoord;
+
             const coord = await frame.coordinates;
             const percentage = await frame.percentagePosition;
-            const outputPath = path.join(__dirname, `../uploads/${req.params.id + await frame._id}.png`);
+            const date = Date.now();
+
+            const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${date}.png`);
 
             // await the result of applyMask
 
-            await applyMask(baseImage, maskImages, outputPath, coord, width, height, percentage, randomNumber);
+            await applyMask(baseImage, image, outputPath, coord, width, height, percentage, randomNumber, req.body.username, name);
 
             return {
-                result1: `${req.protocol}://${req.get('host')}/${req.params.id + await frame._id}.png`,
+                result1: `${req.protocol}://${req.get('host')}/${req.params.id}-${date}.png`,
             };
         }));
 
@@ -274,47 +238,35 @@ router.post('/double-percentage/:id', cpup2, async (req, res) => {
 
 });
 
-const cpup3 = uploadFile.fields([{
-    name: 'image', maxCount: 10
-}])
 
-router.post('/percentage-range/:id', cpup3, async (req, res) => {
+router.post('/percentage-range/:id', async (req, res) => {
     try {
         const re = await FunTest.findById(req.params.id);
 
-        // const randomNumber = Math.floor(Math.random() * 100 + 1);
-        const randomNumber = 40;
+        const randomNumber = Math.floor(Math.random() * 100 + 1);
 
 
-        let maskImages = []
-
-        try {
-
-            if (req.files['image']) {
-
-                maskImages = await Promise.all(req.files['image'].map(async (file) => {
-                    return await uploadAndGetFirebaseUrl(file);
-                }));
-            }
-        } catch (e) {
-            console.log(e);
-        }
+        const image = req.body.image
 
         const number = re.range.find(r => r.y >= randomNumber && r.x <= randomNumber);
+        const date = Date.now();
 
         const baseImage = await re.frames[0].frameUrl;
         const coord = await re.frames[0].coordinates;
-        const outputPath = path.join(__dirname, `../uploads/${req.params.id}.png`);
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id}-${date}.png`);
 
         const width = re.frames[0].frame_size.width;
         const height = re.frames[0].frame_size.height;
         const percentage = await re.frames[0].textPosition;
+        const name = ress.frames[0].nameCoord;
+
         // await the result of applyMask
-        console.log(baseImage, maskImages, outputPath, coord, width, height, percentage, number);
-        let ress = await applyMask(baseImage, maskImages, outputPath, coord, width, height, percentage, `${number.value}`);
+        console.log(baseImage, image, outputPath, coord, width, height, percentage, number);
+        let ress = await applyMask(baseImage, image, outputPath, coord, width, height, percentage, `${number.value}`, req.body.username, name);
 
 
-        res.send({ _id: req.params.id, result: ress });
+        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id}-${date}.png` });
+
     } catch (error) {
         res.status(500).send(error.message);
     }
@@ -460,17 +412,16 @@ router.delete('/delete/:id', auth, adminRole, async (req, res) => {
 
 
 
-async function applyMaskImg(baseImageUrls, maskImages, outputPath, coordinates, bwidth, bheight) {
+async function applyMaskImg(baseImageUrls, maskImages, outputPath, coordinates, name, namePos, bwidth, bheight) {
     try {
         const baseImage = await Jimp.read(baseImageUrls); // Assuming only one base image is provided
 
         console.log(baseImageUrls, maskImages, outputPath, coordinates);
 
-        for (let i = 0; i < coordinates.length; i++) {
-            let coordinate = coordinates[i];
+        if (coordinates) {
+            let coordinate = coordinates;
             console.log(coordinate)
-            const maskImage = await Jimp.read(await maskImages[i]);
-            console.log(maskImages[i], coordinate.x, coordinate.y, coordinate.width, coordinate.height, bwidth, bheight)
+            const maskImage = await Jimp.read(await maskImages);
             baseImage.resize(+bwidth, +bheight);
             maskImage.resize(+coordinate.width, +coordinate.height);
             baseImage.composite(maskImage, +coordinate.x, +coordinate.y, {
@@ -478,9 +429,23 @@ async function applyMaskImg(baseImageUrls, maskImages, outputPath, coordinates, 
             });
         }
 
+
+
+        if (namePos && name) {
+            const { x, y, width, height } = namePos;
+            const font = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
+            baseImage.print(font, parseInt(x), parseInt(y), {
+                text: name,
+                alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+                alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+            }, parseInt(width), parseInt(height));
+
+        }
+
+
         // for (let i = 0; i < texts.length; i++) {
         //     const { x, y, text } = texts[i];
-        //     const font = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
+
 
         //     baseImage.print(font, +x, +y, text);
         // }
@@ -493,26 +458,37 @@ async function applyMaskImg(baseImageUrls, maskImages, outputPath, coordinates, 
 }
 
 
-async function applyMask(baseImagePath, maskImages, outputPath, coordinates, bwidth, bheight, tcoordinates, text) {
+async function applyMask(baseImagePath, maskImages, outputPath, coordinates, bwidth, bheight, tcoordinates, text, name, namePos) {
     try {
         const image = await Jimp.read(baseImagePath);
 
         image.resize(+bwidth, +bheight);
-        if (maskImages) {
-            for (let i = 0; i < coordinates.length; i++) {
-                let coordinate = coordinates[i];
-                console.log(coordinate)
-                const maskImage = await Jimp.read(await maskImages[i]);
-                console.log(maskImages[i], coordinate.x, coordinate.y, coordinate.width, coordinate.height, bwidth, bheight)
-                maskImage.resize(+coordinate.width, +coordinate.height);
-                image.composite(maskImage, +coordinate.x, +coordinate.y, {
-                    mode: Jimp.BLEND_DESTINATION_OVER
-                });
-            }
+        if (coordinates) {
+            let coordinate = coordinates;
+            console.log(coordinate)
+            const maskImage = await Jimp.read(await maskImages);
+            image.resize(+bwidth, +bheight);
+            maskImage.resize(+coordinate.width, +coordinate.height);
+            image.composite(maskImage, +coordinate.x, +coordinate.y, {
+                mode: Jimp.BLEND_DESTINATION_OVER
+            });
         }
 
-        // Define the text properties
+
         const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK); // Load black font
+        if (namePos && name) {
+            const { x, y, width, height } = namePos;
+
+            image.print(font, parseInt(x), parseInt(y), {
+                text: name,
+                alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+                alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+            }, parseInt(width), parseInt(height));
+
+        }
+
+
+        // Define the text properties
         const { x, y, width, height } = tcoordinates;
 
         image.print(font, parseInt(x), parseInt(y), {

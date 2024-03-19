@@ -1,63 +1,118 @@
 const router = require('express').Router();
 const adminRole = require('../middelware/checkRole');
-const auth = require('../middelware/auth');
-const Menu = require('../model/menu.model');
+const sub = require('../model/subCategory.model');
+const thumbl = require('../model/categoryThum.model');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
-router.get('/get-all', async (req, res) => {
+router.post('/add-thumbnail', uploadFile.single("thumbnail"), async (req, res) => {
 
-    let lang = req.query.lang;
+    const { category } = req.body;
 
-    try {
-        const menu = await Menu.find();
-
-        if (lang) {
-
-            const result = await menu.map(function (item) {
-
-                const title = item.titleDifLang.find(title => title.lang.toLowerCase() === lang.toLowerCase());
-
-                item['title'] = title ? title.text : item.title;
-
-                return item;
-            })
-            res.send(result);
-        }
-
-        else {
-            res.send(menu);
-        }
-
-    } catch (error) {
-        res.status(500).send({ error: error.message });
+    if (!req.file) {
+        return res.status(404).json({ success: false, error: 'thumbnail not found' });
     }
 
-});
-
-router.get('/get/:id', async (req, res) => {
-
-    let lang = req.query.lang;
-
     try {
-        const menu = await Menu.findById(req.params.id);
 
-        if (lang) {
+        const thh = await thumbl.findOne({ category: category });
 
-            const title = menu.titleDifLang.find(title => title.lang.toLowerCase() === lang.toLowerCase());
+        if (thh) {
 
-            menu['title'] = title ? title.text : menu.title;
+
+            thh.thumbnail = await uploadAndGetFirebaseUrl(req);
+
+            thh.save();
+        } else {
+
+            const Thumbnail = new thumbl({
+                category, thumbnail: await uploadAndGetFirebaseUrl(req)
+            });
+
+            await Thumbnail.save()
         }
 
 
-        res.send(menu)
-
+        res.status(200).json({ success: true, message: 'thumbnail upodate' });
 
     } catch (error) {
-        res.status(500).send({ error: error.message });
-    }
 
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 
+router.post('/edit-thumbnail', uploadFile.single("thumbnail"), async (req, res) => {
+
+    const { category } = req.body;
+    try {
+
+        const thh = await thumbl.findOne({ category: category });
+
+        if (req.file) {
+
+            thh.thumbnail = await uploadAndGetFirebaseUrl(req);
+        }
+
+        thh.save();
+
+
+        res.status(200).json({ success: true, message: 'thumbnail upodate' });
+
+
+    } catch (error) {
+
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
+
+router.post('/add-subcategory', uploadFile.single("thumbnail"), async (req, res) => {
+
+    const { category, title } = req.body;
+
+    if (!req.file) {
+        return res.status(404).json({ success: false, error: 'thumbnail not found' });
+    }
+
+    try {
+
+
+        const Thumbnail = new sub({
+            category, thumbnail: await uploadAndGetFirebaseUrl(req), title
+        });
+
+        await Thumbnail.save()
+
+
+
+        res.status(200).json({ success: true, message: 'thumbnail upodate', data: Thumbnail.toJSON() });
+
+
+    } catch (error) {
+
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
+router.get('/get-subcategory/:category', async (req, res) => {
+
+    const category = req.params.category;
+
+    try {
+
+        console.log(category);
+        const category1 = await sub.find({ category: category });
+
+        res.status(200).json(category1);
+
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: error.message });
+    }
+
+});
 
 
 module.exports = router;

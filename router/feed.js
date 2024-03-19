@@ -14,7 +14,7 @@ router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (r
         const fileUrl = await uploadAndGetFirebaseUrl(req)
         console.log(req.file)
 
-        let { description, category, title, language, isActive } = req.body;
+        let { description, subCategory, title, language, isActive } = req.body;
 
 
 
@@ -30,7 +30,7 @@ router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (r
 
         // const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
         // const imagePath = req.file.path;
-        const feed = await feeds.create({ category, title, imageUrl: fileUrl, description, isActive, user: req.user.id, language });
+        const feed = await feeds.create({ subCategory, title, imageUrl: fileUrl, description, isActive, user: req.user.id, language });
         console.log(feed);
         const Language = await Category.findById(feed.language);
         if (!category) {
@@ -77,16 +77,29 @@ router.get('/get-feed/:id', async (req, res) => {
 });
 
 
-router.get("/category/:category", async (req, res) => {
+router.get('/get/:id', async (req, res) => {
+
+    if (!req.params.id) {
+        res.status(404).json({ message: 'Missing quizze id' });
+    }
+    const lang = req.query.lang;
+
     try {
-        const data = await feeds.find({ category: req.params.category });
-        res.send(data);
+        const con = await feeds.find({ subCategory: req.params.id, language: lang, isActive: true }).populate({
+            path: 'user',
+            select: '-password' // Exclude password and email fields from the 'user' document
+        }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user',
+                select: '-password'
+            }
+        });
+        res.json(con);
     } catch (error) {
-        res.status(500).json({ message: 'Internal server error:' + error });
+        res.status(500).json(error.message);
     }
 });
-
-
 
 router.get("/get-all", async (req, res) => {
     const lang = req.query.lang;

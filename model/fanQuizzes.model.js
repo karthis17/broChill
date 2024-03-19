@@ -17,8 +17,8 @@ module.exports = mongoose.model("fanQuizzes", {
 
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
     isActive: { type: Boolean, default: false },
-    category: String,
-    subCategory: String,
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+
 
     questions: [{
 
@@ -41,7 +41,8 @@ module.exports = mongoose.model("fanQuizzes", {
             width: { type: Number },
             height: { type: Number },
         },
-        coordinates: [],
+        coordinates: {},
+        nameCoord: {},
         scorePosition: {
             x: Number,
             y: Number,

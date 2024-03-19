@@ -16,7 +16,7 @@ const upp = uploadFile.fields([{
 
 router.post('/upload-reel', auth, adminRole, upp, async (req, res) => {
 
-    const { language, description, category, title, isActive } = req.body;
+    const { language, description, subCategory, title, isActive } = req.body;
 
     try {
 
@@ -37,7 +37,7 @@ router.post('/upload-reel', auth, adminRole, upp, async (req, res) => {
         }
 
 
-        const reel = await reels.create({ category, title, fileUrl, user: req.user.id, language, isActive, description, thumbnail });
+        const reel = await reels.create({ subCategory, title, fileUrl, user: req.user.id, language, isActive, description, thumbnail });
 
         if (!description) {
             return res.status(400).json({ message: 'Description is required' });
@@ -60,12 +60,27 @@ router.post('/upload-reel', auth, adminRole, upp, async (req, res) => {
 
 
 
-router.get("/category/:category", async (req, res) => {
+router.get('/get/:id', async (req, res) => {
+
+    if (!req.params.id) {
+        res.status(404).json({ message: 'Missing quizze id' });
+    }
+    const lang = req.query.lang;
+
     try {
-        const data = await reels.find({ category: req.params.category });
-        res.send(data);
+        const con = await reels.find({ subCategory: req.params.id, language: lang, isActive: true }).populate({
+            path: 'user',
+            select: '-password' // Exclude password and email fields from the 'user' document
+        }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user',
+                select: '-password'
+            }
+        });
+        res.json(con);
     } catch (error) {
-        res.status(500).json({ message: 'Internal server error:' + error });
+        res.status(500).json(error.message);
     }
 });
 

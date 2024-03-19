@@ -20,8 +20,8 @@ module.exports = mongoose.model("quizzes", {
 
     }],
 
-    category: String,
-    subCategory: String,
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+
 
     results: [{
         maxScore: { type: Number, required: true },
@@ -31,7 +31,8 @@ module.exports = mongoose.model("quizzes", {
             width: { type: Number },
             height: { type: Number },
         },
-        coordinates: [],
+        coordinates: {},
+        nameCoord: {},
         scorePosition: {
             x: Number,
             y: Number,

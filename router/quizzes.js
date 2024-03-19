@@ -37,7 +37,7 @@ const cpUpload = uploadFile.fields([
 
 router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
-    let { questions, results, description, language, category, subCategory, isActive } = req.body;
+    let { questions, results, description, language, subCategory, isActive } = req.body;
 
     console.log(req.body)
 
@@ -74,7 +74,7 @@ router.post('/add-quizze', auth, adminRole, cpUpload, async (req, res) => {
 
 
     try {
-        const qu = await Quizzes.create({ questions, results, description, referenceImage: referencesImage, isActive, category, subCategory, language, user: req.user.id });
+        const qu = await Quizzes.create({ questions, results, description, referenceImage: referencesImage, isActive, subCategory, language, user: req.user.id });
 
         const Language = await Category.findById(qu.language);
         if (!Language) {
@@ -112,21 +112,29 @@ router.get('/get-all', async (req, res) => {
 
     }
 });
-
-router.get('/get-quizze/:id', async (req, res) => {
+router.get('/get/:id', async (req, res) => {
 
     if (!req.params.id) {
         res.status(404).json({ message: 'Missing quizze id' });
     }
+    const lang = req.query.lang;
 
     try {
-        const quizze = await Quizzes.findById(req.params.id);
-        res.json(quizze);
+        const con = await Quizzes.find({ subCategory: req.params.id, language: lang, isActive: true }).populate({
+            path: 'user',
+            select: '-password' // Exclude password and email fields from the 'user' document
+        }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user',
+                select: '-password'
+            }
+        });
+        res.json(con);
     } catch (error) {
         res.status(500).json(error.message);
     }
 });
-
 
 router.get("/all", async (req, res) => {
 
@@ -196,13 +204,8 @@ router.post('/add-comment/:id', auth, async (req, res) => {
 });
 
 
-
-const cpUplad = uploadFile.fields([
-    { name: 'image', maxCount: 5 }
-]);
-
-router.post('/get-result', cpUplad, async (req, res) => {
-    let { score, quizze_id } = req.body;
+router.post('/get-result', async (req, res) => {
+    let { score, quizze_id, image, username } = req.body;
 
     try {
 
@@ -212,69 +215,25 @@ router.post('/get-result', cpUplad, async (req, res) => {
 
         const baseImage = result1.resultImg;
         const squareCoord = result1.coordinates;
-        let Images = [];
-        if (squareCoord.length > 0) {
-            // Upload images in parallel
-            await Promise.all(squareCoord.map(async (corr, i) => {
-                Images.push(await uploadAndGetFirebaseUrl(req.files['image'][i]));
-            }));
+        const name = result1.nameCoord;
 
-            // Assign URLs to squareCoord objects
-            await Promise.all(squareCoord.map(async (sq, i) => {
-                squareCoord[i]["path"] = await Images[i];
-            }));
+        if (squareCoord) {
+            // await Promise.all(squareCoord.map(async (sq, i) => {
+
+            if (!image) {
+                image = `${req.protocol}://${req.get('host')}/pro.webp`;
+            }
+
+            squareCoord["path"] = await image;
         }
+
         const scoreCoord = result1.scorePosition;
-
-
-
-        // let resText = [];
-        // let i = 0
-        // let j = 0
-
-        // for (let test of textCoord) {
-        //     if (test.noOfName.length > 0) {
-        //         test.noOfName.forEach((t) => {
-        //             if (!resText[j]) {
-        //                 resText[j] = test.text.replace(t, userText[i++]);
-        //             } else {
-        //                 resText[j] = resText[j].replace(t, userText[i++]);
-        //             }
-        //         });
-        //         j++;
-        //     } else {
-
-        //         resText.push(test.text);
-        //     }
-        // }
-
-        // const texts = textCoord.map((text, i) => {
-        //     return {
-        //         text: resText[i],
-        //         width: text.width,
-        //         height: text.height,
-        //         x: text.x,
-        //         y: text.y
-        //     };
-        // });
-
-        // scoreCoord["text"] = score;
-        // texts.push(scoreCoord);
 
         const outputPath = path.join(__dirname, `../uploads//${req.body.quizze_id}.png`);
 
-        await applyMask(baseImage, squareCoord, outputPath, `${score}`, scoreCoord, result1.frame_size.width, result1.frame_size.height)
+        await applyMask(baseImage, squareCoord, outputPath, `${score}`, scoreCoord, username, name, result1.frame_size.width, result1.frame_size.height)
         res.send({ result: `${req.protocol}://${req.get('host')}/${req.body.quizze_id}.png` })
 
-
-        // text.forEach(element => {
-        //     let te = element.split(' ');
-        //     te.forEach(line => {
-        //         line.includes('<fanme')
-        //     })
-        // });
-
-        // console.log(response, result1);
 
     } catch (error) {
         res.status(500).json(error.message);
@@ -282,7 +241,7 @@ router.post('/get-result', cpUplad, async (req, res) => {
 });
 
 
-async function applyMask(baseImagePath, maskImages, outputPath, texts, scoreCoord, baseW, baseH) {
+async function applyMask(baseImagePath, maskImages, outputPath, texts, scoreCoord, name, namePos, baseW, baseH) {
     try {
         const baseImage = await Jimp.read(baseImagePath);
         console.log(texts, "sad");
@@ -290,8 +249,8 @@ async function applyMask(baseImagePath, maskImages, outputPath, texts, scoreCoor
         console.log(baseImagePath, maskImages, outputPath);
 
         baseImage.resize(+baseW, +baseH);
-        for (let i = 0; i < maskImages.length; i++) {
-            const { path, x, y, width, height } = maskImages[i];
+        if (maskImages) {
+            const { path, x, y, width, height } = maskImages;
             console.log(path, x, y, width, height);
             const maskImage = await Jimp.read(path);
 
@@ -306,28 +265,27 @@ async function applyMask(baseImagePath, maskImages, outputPath, texts, scoreCoor
 
         const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK); // Load black font
         const { x, y, width, height } = scoreCoord;
-        // let text = texts;
-
-        // // Calculate the center coordinates within the specified region
-        // const centerX = x + width / 2;
-        // const centerY = y + height / 2;
-
-        // // Measure text width and height
-        // const textWidth = Jimp.measureText(font, text);
-        // const textHeight = Jimp.measureTextHeight(font, text);
-
-        // // Calculate the starting position of the text to achieve center alignment
-        // const textX = centerX - textWidth / 2;
-        // const textY = centerY - textHeight / 2;
-
-        // Print the text in the center of the region
-        // baseImage.print(font, textX, textY, text);
+        let text = texts;
 
         baseImage.print(font, parseInt(x), parseInt(y), {
-            text: texts,
+            text: text,
             alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
             alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
         }, parseInt(width), parseInt(height));
+
+
+        if (namePos && name) {
+            const { x, y, width, height } = namePos;
+
+            baseImage.print(font, parseInt(x), parseInt(y), {
+                text: name,
+                alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+                alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+            }, parseInt(width), parseInt(height));
+
+        }
+
+
         await baseImage.writeAsync(outputPath);
 
 
@@ -336,6 +294,7 @@ async function applyMask(baseImagePath, maskImages, outputPath, texts, scoreCoor
         console.error('An error occurred:', error);
     }
 }
+
 
 
 router.get('/share/:id', async (req, res) => {
@@ -374,7 +333,7 @@ const cpUpload1 = uploadFile.fields([
 router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
 
 
-    let { questions, results, description, language, category, subCategory, referencesImage, id, isActive } = req.body;
+    let { questions, results, description, language, subCategory, referencesImage, id, isActive } = req.body;
 
     if (!questions) {
         res.status(404).send({ message: "questions not found", success: false });
@@ -430,7 +389,7 @@ router.put('/update', auth, adminRole, cpUpload1, async (req, res) => {
     }
 
     try {
-        const ress = await Quizzes.findByIdAndUpdate(id, { $set: { questions, results, description, language, category, isActive, subCategory, referencesImage } });
+        const ress = await Quizzes.findByIdAndUpdate(id, { $set: { questions, results, description, language, isActive, subCategory, referencesImage } });
 
         res.json(ress);
     } catch (error) {

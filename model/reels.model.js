@@ -7,7 +7,8 @@ const reelSchema = new mongoose.Schema({
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
     description: { type: String },
     thumbnail: String,
-    category: { type: String, required: true },
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+
     fileUrl: { type: String, required: true },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     isActive: { type: Boolean, default: false },

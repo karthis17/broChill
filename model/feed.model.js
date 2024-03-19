@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 module.exports = mongoose.model("feed", {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     description: { type: String, required: true },
-    category: { type: String, required: true },
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+
     title: { type: String, required: true },
     imageUrl: { type: String, required: true },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

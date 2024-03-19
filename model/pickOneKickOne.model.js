@@ -8,8 +8,8 @@ module.exports = mongoose.model("pickKick", {
     thumbnail: { type: String, required: true },
     description: { type: String, required: true },
 
-    category: String,
-    subcategory: String,
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+
 
     questions: [{
 

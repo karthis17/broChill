@@ -14,7 +14,9 @@ const Guessgame = require('../model/guessGame.model');
 const generalQuestion = require('../model/general.model')
 const riddle = require('../model/riddles.model');
 const contest = require('../model/contest.model');
-
+const sub = require('../model/subCategory.model');
+const thumbl = require('../model/categoryThum.model');
+const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
 
 
 
@@ -101,7 +103,7 @@ router.get('/data/:language', (req, res) => {
 
 router.post('/add-language', (req, res) => {
 
-    const { language, native, categoryNative } = req.body;
+    const { language, native } = req.body;
 
     const newCategory = new Category({
         language: language,
@@ -121,7 +123,7 @@ router.post('/add-language', (req, res) => {
             gkQuestion: [],
             riddles: []
         },
-        categoryInNative: categoryNative,
+
 
     });
 
@@ -134,14 +136,14 @@ router.post('/add-language', (req, res) => {
 
 
 });
-router.get('/category-names', (req, res) => {
+router.get('/category-names', async (req, res) => {
     Category.find({})
-        .then(categories => {
+        .then(async (categories) => {
             if (!categories || categories.length === 0) {
                 return res.status(404).json({ error: 'No data found' });
             }
 
-            const result = [];
+
             const categoryNames = ["Personality Quiz", "Fans Quiz", "Fun Test", "Name Test", "Polls", "Party Games", "Contest Quiz", "GK Quiz", "Riddles"];
             const nameInDataBase = [
                 "quizzes",
@@ -154,28 +156,34 @@ router.get('/category-names', (req, res) => {
                 "gkQuestion",
                 "riddles"]
 
+
             // Iterate over each category
-            categories.forEach(category => {
-                const nonEmptyCategories = ['All'];
+            // Iterate over each category
+            const result = await Promise.all(categories.map(async (category) => {
+                const nonEmptyCategories = [{ category: 'All' }];
                 const data = category.data;
 
-                // Check each category in data and add non-empty category names to the array
                 for (const key in data) {
                     if (data.hasOwnProperty(key) && Array.isArray(data[key]) && data[key].length > 0) {
                         if (nameInDataBase.indexOf(key) !== -1) {
-                            nonEmptyCategories.push(categoryNames[nameInDataBase.indexOf(key)]);
-                        }
+                            try {
+                                const su = await thumbl.findOne({ category: key });
 
+                                nonEmptyCategories.push({ category: categoryNames[nameInDataBase.indexOf(key)], thumbnail: su ? su.thumbnail : '' });
+                            } catch (err) {
+                                console.error(err);
+                                nonEmptyCategories.push({ category: categoryNames[nameInDataBase.indexOf(key)], thumbnail: '' });
+                            }
+                        }
                     }
                 }
 
-                // If non-empty categories found, add language and category names to result
-                if (nonEmptyCategories.length > 1) {
-                    result.push({ _id: category._id, language: category.language, native: category.native, category: nonEmptyCategories });
-                }
-            });
+                return { _id: category._id, language: category.language, native: category.native, category: nonEmptyCategories };
+            }));
 
             res.status(200).json(result);
+
+
         })
         .catch(error => {
             console.error('Error:', error);

@@ -111,6 +111,30 @@ router.get('/all', async (req, res) => {
 });
 
 
+router.get('/get/:id', async (req, res) => {
+
+    if (!req.params.id) {
+        res.status(404).json({ message: 'Missing quizze id' });
+    }
+    const lang = req.query.lang;
+
+    try {
+        const con = await riddles.find({ subCategory: req.params.id, language: lang, isActive: true }).populate({
+            path: 'user',
+            select: '-password' // Exclude password and email fields from the 'user' document
+        }).populate({
+            path: 'comments',
+            populate: {
+                path: 'user',
+                select: '-password'
+            }
+        });
+        res.json(con);
+    } catch (error) {
+        res.status(500).json(error.message);
+    }
+});
+
 
 // router.post('/get-by-id/:id', async (req, res) => {
 

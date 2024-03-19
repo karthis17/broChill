@@ -29,12 +29,8 @@ module.exports = mongoose.model('FunTest', {
             width: { type: Number, required: true },
             height: { type: Number, required: true }
         },
-        coordinates: [{
-            x: { type: Number },
-            y: { type: Number, },
-            width: { type: Number },
-            height: { type: Number }
-        }],
+        coordinates: {},
+        nameCoord: {},
         textPosition: {
             x: { type: Number },
             y: { type: Number },

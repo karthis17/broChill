@@ -71,9 +71,14 @@ router.post('/add-question', auth, adminRole, cpUplad, async (req, res) => {
 });
 
 router.get('/get/:id', async (req, res) => {
-    let lang = req.query.lang
+
+    if (!req.params.id) {
+        res.status(404).json({ message: 'Missing quizze id' });
+    }
+    const lang = req.query.lang;
+
     try {
-        const pick = await pickAndKick.findById(req.params.id).populate({
+        const con = await pickAndKick.find({ subCategory: req.params.id, language: lang, isActive: true }).populate({
             path: 'user',
             select: '-password' // Exclude password and email fields from the 'user' document
         }).populate({
@@ -83,15 +88,11 @@ router.get('/get/:id', async (req, res) => {
                 select: '-password'
             }
         });
-
-
-        res.send(pick);
+        res.json(con);
     } catch (error) {
-
-        res.json({ error: error.message });
+        res.status(500).json(error.message);
     }
 });
-
 
 router.get('/get-all', async (req, res) => {
     try {
