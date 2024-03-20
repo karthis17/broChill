@@ -367,10 +367,12 @@ router.post('/name-fact/:id', async (req, res) => {
 
         fact = fact.fact.replace('<fname>', name);
 
-        res.send(fact);
+        res.send({ result: fact, success: true });
 
     } catch (error) {
         console.log(error)
+
+        res.send({ error: error.message, success: false });
     }
 });
 
