@@ -7,7 +7,7 @@ const User = require("../model/admin.model");
 
 const auth = require("../middelware/auth");
 const adminRole = require('../middelware/checkRole');
-
+require('dotenv').config();
 
 
 router.post(
@@ -62,7 +62,7 @@ router.post(
 
             jwt.sign(
                 payload,
-                "randomString",
+                process.env.SECRET_KEY,
                 {
                     expiresIn: '30d'
                 },
@@ -128,7 +128,7 @@ router.post(
 
             jwt.sign(
                 payload,
-                "randomString",
+                process.env.SECRET_KEY,
                 {
                     expiresIn: '30d'
                 },

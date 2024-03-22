@@ -7,7 +7,7 @@ const User = require("../model/user.model");
 const Follow = require("../model/follow.model");
 const auth = require("../middelware/auth");
 const { uploadFile, uploadAndGetFirebaseUrl } = require('../commonFunc/firebase');
-
+require("dotenv").config();
 
 
 router.post(
@@ -70,10 +70,8 @@ router.post(
 
             jwt.sign(
                 payload,
-                "randomString",
-                {
-                    expiresIn: '30d'
-                },
+                process.env.SECRET_KEY,
+
                 (err, token) => {
                     if (err) throw err;
                     res.status(200).json({
@@ -89,6 +87,75 @@ router.post(
     }
 );
 
+
+
+
+router.post('/social/login', async (req, res) => {
+
+    const { username, email, password, profile } = req.body;
+
+    try {
+        let user = await User.findOne({
+            email
+        });
+        if (user) {
+
+            const payload = {
+                user: {
+                    id: user.id
+                }
+            };
+
+            jwt.sign(
+                payload,
+                process.env.SECRET_KEY,
+
+                (err, token) => {
+                    if (err) throw err;
+                    return res.status(200).json({
+                        token, _id: user._id
+                    });
+                }
+            );
+
+        } else {
+
+            user = new User({
+                username,
+                email,
+                password,
+                profile
+            });
+
+
+            await user.save();
+
+            const payload = {
+                user: {
+                    id: user.id
+                }
+            };
+
+            jwt.sign(
+                payload,
+                process.env.SECRET_KEY,
+
+                (err, token) => {
+                    if (err) throw err;
+                    res.status(200).json({
+                        token, _id: user._id
+                    });
+                }
+            );
+        }
+
+
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).send({ message: err.message });
+    }
+
+});
 
 
 
@@ -137,10 +204,7 @@ router.post(
 
             jwt.sign(
                 payload,
-                "randomString",
-                {
-                    expiresIn: '30d'
-                },
+                process.env.SECRET_KEY,
                 (err, token) => {
                     if (err) throw err;
                     res.status(200).json({
