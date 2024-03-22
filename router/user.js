@@ -77,7 +77,7 @@ router.post(
                 (err, token) => {
                     if (err) throw err;
                     res.status(200).json({
-                        token
+                        token, _id: user._id
                     });
                 }
             );
@@ -128,6 +128,7 @@ router.post(
                     message: "Incorrect Password !"
                 });
 
+
             const payload = {
                 user: {
                     id: user.id
@@ -143,7 +144,7 @@ router.post(
                 (err, token) => {
                     if (err) throw err;
                     res.status(200).json({
-                        token
+                        token, _id: user._id
                     });
                 }
             );

@@ -11,7 +11,7 @@ router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (r
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
-        const fileUrl = await uploadAndGetFirebaseUrl(req)
+        const imageUrl = await uploadAndGetFirebaseUrl(req)
         console.log(req.file)
 
         let { description, subCategory, title, language, isActive } = req.body;
@@ -30,7 +30,7 @@ router.post('/upload-feed', auth, adminRole, uploadFile.single('feed'), async (r
 
         // const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
         // const imagePath = req.file.path;
-        const feed = await feeds.create({ subCategory, title, imageUrl: fileUrl, description, isActive, user: req.user.id, language });
+        const feed = await feeds.create({ subCategory, title, imageUrl, description, isActive, user: req.user.id, language });
         console.log(feed);
         const Language = await Category.findById(feed.language);
         if (!category) {
@@ -216,7 +216,7 @@ router.post('/add-comment/:id', auth, async (req, res) => {
 router.put("/update", auth, adminRole, uploadFile.single("new_feed"), async (req, res) => {
 
     console.log(req.body)
-    let { description, subCategory, title, language, isActive, id, imageUrl } = req.body;
+    let { description, title, language, isActive, id, imageUrl } = req.body;
     try {
         if (req.file) {
             imageUrl = await uploadAndGetFirebaseUrl(req)
@@ -229,7 +229,7 @@ router.put("/update", auth, adminRole, uploadFile.single("new_feed"), async (req
             return res.status(400).json({ message: 'Description is required' });
         }
 
-        const feed = await feeds.findByIdAndUpdate(id, { $set: { subCategory, title, imageUrl, description, language, isActive } });
+        const feed = await feeds.findByIdAndUpdate(id, { $set: { title, imageUrl, description, language, isActive } });
         console.log(feed);
 
         res.status(201).json(feed);
