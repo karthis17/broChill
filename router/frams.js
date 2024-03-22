@@ -75,7 +75,8 @@ router.get('/get-all', async function (req, res) {
             path: 'comments',
             populate: {
                 path: 'user',
-                select: '-password'
+                select: ['-password', '-post']
+
             }
         });
         res.send(data);

@@ -75,7 +75,8 @@ router.get('/get/:id', async (req, res) => {
             path: 'comments',
             populate: {
                 path: 'user',
-                select: '-password'
+                select: ['-password', '-post']
+
             }
         });
         res.json(con);

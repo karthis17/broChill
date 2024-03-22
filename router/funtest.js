@@ -283,7 +283,9 @@ router.get('/get-all', async (req, res) => {
         }).populate({
             path: 'comments',
             populate: {
-                path: 'user'
+                path: 'user',
+                select: ['-password', '-post']
+
             }
         });
         res.send(result);

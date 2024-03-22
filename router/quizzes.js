@@ -102,7 +102,7 @@ router.get('/get-all', async (req, res) => {
             path: 'comments',
             populate: {
                 path: 'user',
-                select: '-password'
+                select: ['-password', '-post']
             }
         });
         console.log(quizzes);
