@@ -250,7 +250,7 @@ router.post('/add-profile', auth, uploadFile.single('profile'), async (req, res)
 
         let profile = await uploadAndGetFirebaseUrl(req);
 
-        const user = await User.findById(userId).select(-password);
+        const user = await User.findById(userId).select('-password');
 
         user.profile = profile
 
