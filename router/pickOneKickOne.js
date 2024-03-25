@@ -149,8 +149,9 @@ router.post('/:postId/vote', auth, async (req, res) => {
 
         // option.votedUsers.push(req.user.id);
         option.vote = option.vote ? parseInt(option.vote) + 1 : 1;
+        console.log(question);
 
-        let existingUser = await question.totalVotes.find(opt => opt.votedUser.toString() === req.user.id);
+        let existingUser = await question.totalVotes.find(opt => opt.votedUser.toString() === req.user.id.toString());
 
         console.log(existingUser);
 

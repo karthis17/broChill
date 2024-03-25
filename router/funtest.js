@@ -211,28 +211,29 @@ router.post('/double-percentage/:id', async (req, res) => {
     try {
         const ress = await FunTest.findById(req.params.id);
         const image = req.body.image;
-        const result = await Promise.all(ress.frames.map(async (frame, i) => {
-            const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
-            const baseImage = await frame.frameUrl;
-            const width = await frame.frame_size.width
-            const height = await frame.frame_size.height
-            const name = await frame.nameCoord;
-            const date = Date.now();
 
-            const coord = await frame.coordinates;
-            const percentage = await frame.percentagePosition;
-            const outputPath = path.join(__dirname, `../uploads/${req.params.id + await frame._id}-${date}.png`);
+        let frame = ress.frames[0]
 
-            // await the result of applyMask
+        const randomNumber = `${Math.floor(Math.random() * 100 + 1)}%`;
+        const randomNumber1 = `${Math.floor(Math.random() * 100 + 1)}%`;
+        const baseImage = await frame.frameUrl;
+        const width = await frame.frame_size.width
+        const height = await frame.frame_size.height
+        const name = await frame.nameCoord;
+        const date = Date.now();
 
-            await applyMask(baseImage, image, outputPath, coord, width, height, percentage, randomNumber, req.body.username, name);
+        const coord = await frame.coordinates;
+        const percentage = await frame.percentagePosition;
+        const secondPercentage = await frame.secondPercentage;
+        const outputPath = path.join(__dirname, `../uploads/${req.params.id + await frame._id}-${date}.png`);
 
-            return {
-                result1: `${req.protocol}://${req.get('host')}/${req.params.id + await frame._id}-${date}.png`,
-            };
-        }));
+        // await the result of applyMask
 
-        res.send({ _id: req.params.id, result });
+        await applyMask(baseImage, image, outputPath, coord, width, height, percentage, randomNumber, req.body.username, name, secondPercentage, randomNumber1);
+
+
+        res.send({ _id: req.params.id, result: `${req.protocol}://${req.get('host')}/${req.params.id + await frame._id}-${date}.png` });
+
     } catch (error) {
         res.status(500).send(error.message);
     }
@@ -460,7 +461,7 @@ async function applyMaskImg(baseImageUrls, maskImages, outputPath, coordinates, 
 }
 
 
-async function applyMask(baseImagePath, maskImages, outputPath, coordinates, bwidth, bheight, tcoordinates, text, name, namePos) {
+async function applyMask(baseImagePath, maskImages, outputPath, coordinates, bwidth, bheight, tcoordinates, text, name, namePos, secondPercentage = false, perct = false) {
     try {
         const image = await Jimp.read(baseImagePath);
 
@@ -488,6 +489,16 @@ async function applyMask(baseImagePath, maskImages, outputPath, coordinates, bwi
             }, parseInt(width), parseInt(height));
 
         }
+        if (secondPercentage && perct) {
+            const { x, y, width, height } = secondPercentage;
+
+            image.print(font, parseInt(x), parseInt(y), {
+                text: perct,
+                alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+                alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+            }, parseInt(width), parseInt(height));
+
+        }
 
 
         // Define the text properties
@@ -507,6 +518,7 @@ async function applyMask(baseImagePath, maskImages, outputPath, coordinates, bwi
         console.error("Error:", error);
     }
 }
+
 
 
 router.get("/all", async (req, res) => {

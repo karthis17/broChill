@@ -43,6 +43,7 @@ module.exports = mongoose.model('FunTest', {
             width: { type: Number },
             height: { type: Number },
         },
+        secondPercentage: {}
     }],
 
     isActive: { type: Boolean, default: false },

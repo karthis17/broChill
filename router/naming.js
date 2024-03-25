@@ -117,8 +117,8 @@ router.post("/calculate-love/:postId", async (req, res) => {
         const percentageCoord = frame.percentagePosition;
         const name1Coord = frame.name1Position;
         const name2Coord = frame.name2Position;
-
-        const outputPath = path.join(__dirname, `../uploads/${req.params.postId}.png`);
+        const date = Date.now();
+        const outputPath = path.join(__dirname, `../uploads/${req.params.postId + date}.png`);
 
         let cood = [{
 
@@ -141,7 +141,7 @@ router.post("/calculate-love/:postId", async (req, res) => {
 
         await applyMask(baseImage, outputPath, width, height, cood);
 
-        res.send({ result: `${req.protocol}://${req.get('host')}/${req.params.postId}.png` })
+        res.send({ result: `${req.protocol}://${req.get('host')}/${req.params.postId + date}.png` })
 
     } catch (error) {
         console.error(error)
@@ -180,8 +180,9 @@ router.post("/calculate-friendship/:postId", async (req, res) => {
         const percentageCoord = frame.percentagePosition;
         const name1Coord = frame.name1Position;
         const name2Coord = frame.name2Position;
+        const date = Date.now();
 
-        const outputPath = path.join(__dirname, `../uploads/${req.params.postId}.png`);
+        const outputPath = path.join(__dirname, `../uploads/${req.params.postId + date}.png`);
 
         let cood = [{
 
@@ -204,7 +205,7 @@ router.post("/calculate-friendship/:postId", async (req, res) => {
 
         await applyMask(baseImage, outputPath, width, height, cood);
 
-        res.send({ result: `${req.protocol}://${req.get('host')}/${req.params.postId}.png` })
+        res.send({ result: `${req.protocol}://${req.get('host')}/${req.params.postId + date}.png` })
 
     } catch (error) {
         console.error(error)
@@ -221,14 +222,10 @@ router.post('/flames/:id', async (req, res) => {
     console.log(name1, name2);
     try {
 
-        let word = await calculateFLAMES(name1, name2);
+        let word = calculateFLAMES(name1, name2);
 
-        if (!word) {
+        console.log(word)
 
-            word = "love"
-        }
-
-        console.log(word);
 
         const result = await Nameing.findById(req.params.id);
 
@@ -276,11 +273,13 @@ router.post('/flames/:id', async (req, res) => {
     }
 })
 
-async function calculateFLAMES(name1, name2) {
+function calculateFLAMES(name1, name2) {
     const flames = ['Friends', 'Love', 'Affection', 'Marriage', 'Enmity', 'Sibling'];
     const commonLetters = [...new Set(name1.toLowerCase())].filter(letter => name2.toLowerCase().includes(letter));
     const resultIndex = (commonLetters.length - 1) % flames.length;
-
+    if (resultIndex === -1) {
+        return flames[Math.floor(Math.random() * flames.length)]
+    }
     return flames[resultIndex];
 }
 
