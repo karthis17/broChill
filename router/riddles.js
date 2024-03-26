@@ -88,8 +88,11 @@ router.get('/get-all', async (req, res) => {
         }).populate({
             path: 'questions',
             populate: {
-                path: 'user',
-                select: ['-password', '-post']
+                path: 'comments',
+                populate: {
+                    path: 'user',
+                    select: ['-password', '-post']
+                }
 
             }
         });
@@ -176,7 +179,7 @@ router.post("/add/questions-comment", auth, async (req, res) => {
             return res.status(404).json({ error: "Question not found" });
         }
 
-        question.comments.push({ text: comment });
+        question.comments.push({ user: req.user.id, text: comment });
 
         await response.save();
 

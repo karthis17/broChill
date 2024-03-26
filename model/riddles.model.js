@@ -25,7 +25,7 @@ module.exports = mongoose.model("riddle", {
         hasOption: { type: Boolean, required: true },
     }],
 
-    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory' },
 
     isActive: { type: Boolean, default: false },
 
