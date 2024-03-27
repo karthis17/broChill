@@ -8,7 +8,7 @@ module.exports = mongoose.model("frames", {
     description: { type: String, required: true },
     frameUrl: { type: String, required: true },
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
-    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory' },
 
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
     shares: { type: Number, default: 0 },
