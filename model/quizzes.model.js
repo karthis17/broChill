@@ -20,7 +20,8 @@ module.exports = mongoose.model("quizzes", {
 
     }],
 
-    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory' },
+
 
 
     results: [{

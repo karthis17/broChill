@@ -4,7 +4,8 @@ module.exports = mongoose.model("generalQuestion", {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
 
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
-    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory' },
+
 
 
     questions: [{

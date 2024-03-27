@@ -8,7 +8,8 @@ module.exports = mongoose.model("contest", {
 
     isActive: { type: Boolean, default: false },
 
-    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory' },
+
 
     questions: [{
 

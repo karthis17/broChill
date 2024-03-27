@@ -17,7 +17,7 @@ module.exports = mongoose.model("fanQuizzes", {
 
     language: { type: mongoose.Schema.Types.ObjectId, ref: 'language', required: true },
     isActive: { type: Boolean, default: false },
-    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory', required: true },
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'subCategory' },
 
 
     questions: [{
