@@ -161,6 +161,8 @@ router.post('/get-result', async (req, res) => {
         const squareCoord = result1.coordinates;
         const name = result1.nameCoord;
 
+        const date = Date.now();
+
         if (squareCoord) {
             // await Promise.all(squareCoord.map(async (sq, i) => {
 
@@ -173,10 +175,10 @@ router.post('/get-result', async (req, res) => {
 
         const scoreCoord = result1.scorePosition;
 
-        const outputPath = path.join(__dirname, `../uploads//${req.body.quizze_id}.png`);
+        const outputPath = path.join(__dirname, `../uploads//${req.body.quizze_id}-${date}.png`);
 
         await applyMask(baseImage, squareCoord, outputPath, `${score}`, scoreCoord, username, name, result1.frame_size.width, result1.frame_size.height)
-        res.send({ result: `${req.protocol}://${req.get('host')}/${req.body.quizze_id}.png` })
+        res.send({ result: `${req.protocol}://${req.get('host')}/${req.body.quizze_id}-${date}.png` })
 
 
     } catch (error) {
