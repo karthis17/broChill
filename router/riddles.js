@@ -132,6 +132,16 @@ router.get('/get/:id', async (req, res) => {
                 path: 'user',
                 select: '-password'
             }
+        }).populate({
+            path: 'questions',
+            populate: {
+                path: 'comments',
+                populate: {
+                    path: 'user',
+                    select: ['-password', '-post']
+                }
+
+            }
         });
         res.json(con);
     } catch (error) {
