@@ -377,35 +377,30 @@ router.post('/edit-username', auth, async (req, res) => {
 
 
 router.delete('/remove-post/:postId', auth, async function (req, res) {
-
     const postId = req.params.postId;
     const userId = req.user.id;
 
     try {
         const user = await User.findById(userId).select('-password');
 
-        const postIndex = user.post.findIndex(post => post._id.toString() === postId);
-        if (postIndex === -1) {
-            return res.status(404).json({ error: "Post not found" });
-        }
-
         // Remove the post from the array
-        user.post.splice(postIndex, 1);
+        user.post = await Promise.all(user.post.filter(post => {
+            if (post._id.toString() === postId) {
+                return false;
+            }
+            return true;
+        }));
 
         // Save the updated user document
         await user.save();
 
-        res.status(200).send({ success: true, message: "post deleted successfully", user: user });
-
-
+        res.json({ success: true, message: "Post removed successfully" });
     } catch (error) {
-
-        res.status(500).send({ success: false, message: "Couldn't save profile", error: error.message });
-
-
+        console.error(error);
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
-
 });
+
 
 
 router.post("/follow", auth, async (req, res) => {
